@@ -1,0 +1,82 @@
+from typing import Annotated
+
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from sqlmodel import select
+
+import database as d_b
+from models import ApprovalStatus, User, UserRole
+from security import token
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+
+
+def get_current_user(
+    db: d_b.SessionDep,
+    data: Annotated[str, Depends(oauth2_scheme)],
+) -> User:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    user_email = token.verify_token(data, credentials_exception)
+
+    user = db.exec(
+        select(User).where(User.email == user_email)
+    ).first()
+
+    if not user:
+        raise credentials_exception
+
+    if user.approval_status != ApprovalStatus.APPROVED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account is not approved",
+        )
+
+    return user
+
+
+CurrentUserDep = Annotated[User, Depends(get_current_user)]
+
+
+def get_current_admin(current_user: CurrentUserDep) -> User:
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+
+    return current_user
+
+
+AdminDep = Annotated[User, Depends(get_current_admin)]
+
+
+def get_current_restaurant(current_user: CurrentUserDep) -> User:
+    if current_user.role != UserRole.RESTAURANT:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Restaurant access required",
+        )
+
+    return current_user
+
+
+RestaurantDep = Annotated[User, Depends(get_current_restaurant)]
+
+
+def get_current_ngo(current_user: CurrentUserDep) -> User:
+    if current_user.role != UserRole.NGO:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="NGO access required",
+        )
+
+    return current_user
+
+
+NGODep = Annotated[User, Depends(get_current_ngo)]
