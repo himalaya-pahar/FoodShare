@@ -55,7 +55,7 @@ def get_my_donations(
 )
 def get_available_donations(
     db: d_b.SessionDep,
-    ngo: oauth2.NGOOrAdminDep,
+    current_user: oauth2.CurrentUserDep,
     area: Optional[str] = None,
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
