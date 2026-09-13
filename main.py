@@ -3,13 +3,15 @@ from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 import database as d_b
 import models
-from routers import admin, authenticate, donation, pickup, status_history
+from routers import admin, authenticate, donation, pickup, status_history, profile_image, donation_media
+from config import CREATE_TABLES_ON_STARTUP
 
 
 @asynccontextmanager
 async def lifespan(app:FastAPI):
     print("server starting...")
-    d_b.create_db_and_tables()
+    if CREATE_TABLES_ON_STARTUP:
+        d_b.create_db_and_tables()
     yield
     print("server shutting down...")
 
@@ -31,3 +33,5 @@ app.include_router(admin.router)
 app.include_router(donation.router)
 app.include_router(pickup.router)
 app.include_router(status_history.router)
+app.include_router(profile_image.router)
+app.include_router(donation_media.router)

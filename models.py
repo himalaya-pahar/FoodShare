@@ -43,6 +43,15 @@ class AuditEntityType(str, Enum):
     DONATION = "DONATION"
     PICKUP_REQUEST = "PICKUP_REQUEST"
 
+class MediaType(str, Enum):
+    IMAGE = "IMAGE"
+    VIDEO = "VIDEO"
+
+class MediaUploadStatus(str, Enum):
+    PENDING = "PENDING"
+    READY = "READY"
+    FAILED = "FAILED"
+
 
 class User(SQLModel, table=True):
     __tablename__ = "users"
@@ -184,3 +193,77 @@ class StatusHistory(SQLModel, table=True):
 
     note: Optional[str] = None
     created_at: datetime = Field(default_factory=utc_now)
+
+
+class UserProfileImage(SQLModel, table=True):
+    __tablename__ = "user_profile_images"
+
+    __table_args__ = (
+        UniqueConstraint("user_id", name="uq_user_profile_images_user"),
+        UniqueConstraint(
+            "storage_key",
+            name="uq_user_profile_images_storage_key",
+        ),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    user_id: int = Field(
+        foreign_key="users.id",
+        index=True,
+    )
+
+    content_type: str = Field(max_length=100)
+
+    upload_status: MediaUploadStatus = Field(
+        default=MediaUploadStatus.PENDING,
+        index=True,
+    )
+
+    storage_key: str = Field(max_length=500)
+
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
+
+
+class DonationMedia(SQLModel, table=True):
+    __tablename__ = "donation_media"
+
+    __table_args__ = (
+        CheckConstraint(
+            "sort_order >= 0",
+            name="ck_donation_media_sort_order",
+        ),
+        Index(
+            "ix_donation_media_donation_sort_order",
+            "donation_id",
+            "sort_order",
+        ),
+        UniqueConstraint(
+            "storage_key",
+            name="uq_donation_media_storage_key",
+        ),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    donation_id: int = Field(
+        foreign_key="donations.id",
+        index=True,
+    )
+
+    content_type: str = Field(max_length=100)
+
+    upload_status: MediaUploadStatus = Field(
+        default=MediaUploadStatus.PENDING,
+        index=True,
+    )
+
+    media_type: MediaType = Field(index=True)
+
+    storage_key: str = Field(max_length=500)
+
+    sort_order: int = Field(default=0)
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
+

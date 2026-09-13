@@ -1,7 +1,8 @@
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
-from models import ApprovalStatus, UserRole, DonationStatus, PickupRequestStatus, AuditEntityType
+from models import ApprovalStatus, UserRole, DonationStatus, PickupRequestStatus, AuditEntityType, MediaType
 from datetime import datetime
+from typing import Literal
 
 
 class UserSignup(BaseModel):
@@ -132,3 +133,53 @@ class ShowStatusHistory(BaseModel):
     note: Optional[str] = None
 
     created_at: datetime
+
+
+class ShowUserProfileImage(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    user_id: int
+    media_url: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class ShowDonationMedia(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    donation_id: int
+    media_type: MediaType
+    media_url: str
+    sort_order: int
+    created_at: datetime
+
+class ProfileImageUploadRequest(BaseModel):
+    content_type: Literal[
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+    ]
+
+
+class ProfileImageUploadUrl(BaseModel):
+    image_id: int
+    upload_url: str
+    expires_in: int = 7200
+
+class DonationMediaUploadRequest(BaseModel):
+    content_type: Literal[
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "video/mp4",
+    ]
+
+    sort_order: int = Field(default=0, ge=0)
+
+
+class DonationMediaUploadUrl(BaseModel):
+    media_id: int
+    upload_url: str
+    expires_in: int = 7200

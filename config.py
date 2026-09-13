@@ -20,3 +20,21 @@ if not SECRET_KEY:
 
 if not ALGORITHM:
     raise RuntimeError("ALGORITHM is missing in .env")
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SECRET_KEY = os.getenv("SUPABASE_SECRET_KEY")
+
+SUPABASE_PROFILE_IMAGES_BUCKET = os.getenv(
+    "SUPABASE_PROFILE_IMAGES_BUCKET",
+    "profile-images",
+)
+
+SUPABASE_DONATION_MEDIA_BUCKET = os.getenv(
+    "SUPABASE_DONATION_MEDIA_BUCKET",
+    "donation-media",
+)
+
+CREATE_TABLES_ON_STARTUP = (
+    os.getenv("CREATE_TABLES_ON_STARTUP", "false").lower()
+    == "true"
+)

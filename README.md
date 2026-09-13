@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # FoodShare Backend API
 
 FoodShare is a role-based REST API for coordinating surplus-food donations between restaurants and NGOs. Administrators review accounts, restaurants publish available food, NGOs request collection, and every workflow status change is recorded for traceability.
@@ -50,12 +51,49 @@ FoodShare/
 | **ADMIN** | Review restaurant/NGO accounts; list users; remove inactive accounts. |
 
 Restaurant and NGO signups begin with `PENDING` approval status. An administrator must change the account to `APPROVED` before it can log in. Administrator accounts cannot be created through the public signup endpoint.
+=======
+# FoodShare API
+
+FoodShare is a role-based backend API that connects restaurants with NGOs to reduce food waste. Restaurants publish surplus food donations, NGOs request pickups, and administrators approve and manage accounts.
+
+## Features
+
+- JWT authentication
+- Restaurant, NGO, and Administrator roles
+- Account approval workflow
+- Food donation management
+- Pickup-request workflow
+- Donation and pickup status history
+- PostgreSQL database hosted on Supabase
+- Private Supabase Storage for profile images and donation media
+- Signed upload URLs and temporary signed read URLs
+- One profile image per user
+- Up to five images and one video per donation
+
+## Tech Stack
+
+- FastAPI
+- SQLModel / SQLAlchemy
+- PostgreSQL with Psycopg
+- Supabase PostgreSQL and Storage
+- JWT Authentication
+- Uvicorn
+
+## User Roles
+
+| Role | Responsibilities |
+|---|---|
+| Restaurant | Create donations, manage donation media, accept or reject pickup requests |
+| NGO | Browse donations, submit pickup requests, confirm collection |
+| Administrator | Approve accounts and manage users |
+>>>>>>> 0afa05c (integrate Supabase storage and finalize backend setup)
 
 ## Workflow
 
 ```text
 Restaurant creates donation
         ↓
+<<<<<<< HEAD
 AVAILABLE
         ↓ NGO submits a pickup request
 PENDING pickup request
@@ -72,10 +110,44 @@ At acceptance, all other pending requests for that donation are automatically re
 ## Local Setup
 
 ### 1. Clone and enter the project
+=======
+NGO submits pickup request
+        ↓
+Restaurant accepts one request
+        ↓
+NGO marks pickup collected
+        ↓
+Restaurant marks donation completed
+```
+
+### Donation Statuses
+
+```text
+AVAILABLE → RESERVED → COLLECTED → COMPLETED
+```
+
+Other donation statuses:
+
+```text
+CANCELLED
+EXPIRED
+```
+
+### Pickup Request Statuses
+
+```text
+PENDING → ACCEPTED → COLLECTED
+PENDING → REJECTED
+PENDING → WITHDRAWN
+```
+
+## Installation
+>>>>>>> 0afa05c (integrate Supabase storage and finalize backend setup)
 
 ```bash
 git clone https://github.com/himalaya-pahar/FoodShare.git
 cd FoodShare
+<<<<<<< HEAD
 ```
 
 ### 2. Create and activate a virtual environment
@@ -115,17 +187,90 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
 ### 5. Start the API
+=======
+
+python -m venv venv
+source venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+## Environment Variables
+
+Create a `.env` file in the project root:
+
+```env
+DATABASE_URL=postgresql+psycopg://USER:PASSWORD@HOST:PORT/postgres?sslmode=require
+
+SECRET_KEY=replace_with_a_long_random_secret
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_SECRET_KEY=YOUR_SERVER_ONLY_SUPABASE_SECRET_KEY
+
+SUPABASE_PROFILE_IMAGES_BUCKET=profile-images
+SUPABASE_DONATION_MEDIA_BUCKET=donation-media
+
+CREATE_TABLES_ON_STARTUP=false
+```
+
+Never commit `.env`, database credentials, JWT secrets, or Supabase secret keys.
+
+## Supabase Setup
+
+Create two private Supabase Storage buckets:
+
+```text
+profile-images
+donation-media
+```
+
+Recommended bucket settings:
+
+| Bucket | Accepted files | Maximum size |
+|---|---|---|
+| `profile-images` | JPEG, PNG, WebP | 5 MB |
+| `donation-media` | JPEG, PNG, WebP, MP4 | 5 MB |
+
+## First Database Setup
+
+For a brand-new database, temporarily set:
+
+```env
+CREATE_TABLES_ON_STARTUP=true
+```
+
+Run the server once:
+>>>>>>> 0afa05c (integrate Supabase storage and finalize backend setup)
 
 ```bash
 uvicorn main:app --reload
 ```
 
+<<<<<<< HEAD
 The application creates its tables automatically on startup. Open the interactive API documentation at:
+=======
+After the tables are created, change it back:
+
+```env
+CREATE_TABLES_ON_STARTUP=false
+```
+
+## Run the API
+
+```bash
+uvicorn main:app --reload
+```
+
+Open Swagger documentation:
+>>>>>>> 0afa05c (integrate Supabase storage and finalize backend setup)
 
 ```text
 http://127.0.0.1:8000/docs
 ```
 
+<<<<<<< HEAD
 ## Initial Administrator
 
 Run the bootstrap script once to create or reuse the local administrator account:
@@ -278,3 +423,104 @@ For a persistent production deployment, move to a managed database and update th
 ## License
 
 This repository is an academic software engineering project. Add an explicit license before using it outside the project context.
+=======
+## Administrator Setup
+
+FoodShare does not contain hardcoded administrator credentials.
+
+1. Create an account normally using `/signup`.
+2. Open **Supabase → Table Editor → users**.
+3. Find that user.
+4. Update:
+
+```text
+role = ADMIN
+approval_status = APPROVED
+```
+
+The user can now log in with their own email and password as an administrator.
+
+## Authentication Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/signup` | Create a new account |
+| POST | `/login` | Log in and receive a JWT access token |
+
+`/login` uses OAuth2 form fields:
+
+```text
+username = email address
+password = password
+```
+
+Use the returned access token as a Bearer token for protected endpoints.
+
+## Status History Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/donations/{donation_id}/history` | View donation status history |
+| GET | `/pickup-requests/my/history` | View current NGO pickup history |
+
+## Profile Image Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/profile-image/upload-url` | Request a temporary upload URL |
+| POST | `/profile-image/{image_id}/complete` | Confirm a completed upload |
+| GET | `/profile-image/me` | Get the current user's profile image |
+| DELETE | `/profile-image/{image_id}` | Delete the current user's profile image |
+
+Supported profile-image formats:
+
+```text
+image/jpeg
+image/png
+image/webp
+```
+
+## Donation Media Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/donations/{donation_id}/media/upload-url` | Request a temporary media upload URL |
+| POST | `/donation-media/{media_id}/complete` | Confirm a completed media upload |
+| GET | `/donations/{donation_id}/media` | List ready donation media |
+| DELETE | `/donation-media/{media_id}` | Delete donation media |
+
+Supported donation-media formats:
+
+```text
+image/jpeg
+image/png
+image/webp
+video/mp4
+```
+
+## Private Media Upload Flow
+
+Both Supabase Storage buckets are private.
+
+```text
+1. Client requests an upload URL from FastAPI
+2. FastAPI creates a PENDING media record
+3. Client uploads the file directly to Supabase Storage
+4. Client calls the complete endpoint
+5. FastAPI marks the record READY
+6. API returns a temporary signed read URL when media is requested
+```
+
+Media does not appear in normal `GET` responses until the upload is completed successfully.
+
+## Deployment Notes
+
+- Configure all environment variables in the hosting provider.
+- Keep `CREATE_TABLES_ON_STARTUP=false` after the database schema exists.
+- Keep `SUPABASE_SECRET_KEY` server-only.
+- Never expose database credentials or Supabase secret keys to a frontend application.
+
+## License
+
+This project was created for academic software-engineering purposes.
+>>>>>>> 0afa05c (integrate Supabase storage and finalize backend setup)
