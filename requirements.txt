@@ -9,6 +9,7 @@ certifi==2026.7.22
 cffi==2.1.1
 click==8.5.0
 cryptography==50.0.1
+deprecation==2.1.0
 detect-installer==0.2.1
 dnspython==2.8.0
 email-validator==2.3.0
@@ -17,15 +18,22 @@ fastapi-cli==0.0.32
 fastapi-cloud-cli==0.25.0
 fastar==0.12.0
 h11==0.16.0
+h2==4.4.1
+hpack==4.2.0
 httpcore==1.0.9
 httptools==0.8.0
 httpx==0.28.1
+hyperframe==6.1.0
 idna==3.19
 Jinja2==3.1.6
 Mako==1.4.1
 markdown-it-py==4.2.0
 MarkupSafe==3.0.3
 mdurl==0.1.2
+multidict==6.8.0
+packaging==26.3
+postgrest==2.31.0
+propcache==0.5.2
 psycopg==3.3.5
 psycopg-binary==3.3.5
 pwdlib==0.3.1
@@ -39,6 +47,7 @@ PyJWT==2.13.0
 python-dotenv==1.2.3
 python-multipart==0.0.32
 PyYAML==6.0.3
+realtime==2.31.0
 rich==15.0.0
 rich-toolkit==0.20.5
 rignore==0.8.1
@@ -47,6 +56,11 @@ shellingham==1.5.4
 SQLAlchemy==2.0.52
 sqlmodel==0.0.42
 starlette==1.6.0
+storage3==2.31.0
+StrEnum==0.4.15
+supabase==2.31.0
+supabase-auth==2.31.0
+supabase-functions==2.31.0
 typer==0.27.2
 typing-inspection==0.4.4
 typing_extensions==4.16.0
@@ -54,4 +68,5 @@ urllib3==2.7.0
 uvicorn==0.52.4
 uvloop==0.22.1
 watchfiles==1.2.0
-websockets==17.1
+websockets==15.0.1
+yarl==1.24.5
