@@ -2,11 +2,12 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import HTTPException, status
+from sqlalchemy import func
 from sqlmodel import select
 
 import database as d_b
 import schemas
-from models import AuditEntityType, Donation, DonationStatus, User
+from models import AuditEntityType, Donation, DonationStatus, User, UserRole
 from repository.status_history import add_status_history
 
 
@@ -55,32 +56,74 @@ def create_donation(
 
 
 def get_my_donations(
-    restaurant: User,
+    current_user: User,
     db: d_b.SessionDep,
-) -> list[Donation]:
-    return db.exec(
+    limit: int,
+    offset: int,
+) -> schemas.PaginatedDonations:
+    filters = []
+
+    if current_user.role == UserRole.RESTAURANT:
+        filters.append(Donation.restaurant_id == current_user.id)
+    elif current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Restaurant or Admin access required",
+        )
+
+    donations_statement = (
         select(Donation)
-        .where(Donation.restaurant_id == restaurant.id)
-        .order_by(Donation.created_at)
-    ).all()
+        .where(*filters)
+        .order_by(Donation.created_at.asc(), Donation.id.asc())
+        .offset(offset)
+        .limit(limit)
+    )
+
+    total_statement = select(func.count(Donation.id)).where(*filters)
+
+    donations = db.exec(donations_statement).all()
+    total = db.exec(total_statement).one()
+
+    return schemas.PaginatedDonations(
+        items=donations,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
 def get_available_donations(
     db: d_b.SessionDep,
     area: Optional[str] = None,
-) -> list[Donation]:
-    statement = select(Donation).where(
-        Donation.status == DonationStatus.AVAILABLE
-    )
+    limit: int = 20,
+    offset: int = 0,
+) -> schemas.PaginatedDonations:
+    filters = [Donation.status == DonationStatus.AVAILABLE]
 
     if area:
-        statement = statement.where(
+        filters.append(
             Donation.pickup_area == area.strip()
         )
 
-    return db.exec(
-        statement.order_by(Donation.pickup_deadline)
-    ).all()
+    donations_statement = (
+        select(Donation)
+        .where(*filters)
+        .order_by(Donation.pickup_deadline.asc(), Donation.id.asc())
+        .offset(offset)
+        .limit(limit)
+    )
+
+    total_statement = select(func.count(Donation.id)).where(*filters)
+
+    donations = db.exec(donations_statement).all()
+    total = db.exec(total_statement).one()
+
+    return schemas.PaginatedDonations(
+        items=donations,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
 def get_donation_by_id(

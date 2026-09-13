@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
-from sqlalchemy import update
+from sqlalchemy import func, update
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
@@ -14,6 +14,7 @@ from models import (
     PickupRequest,
     PickupRequestStatus,
     User,
+    UserRole,
 )
 from repository.status_history import add_status_history
 
@@ -57,6 +58,31 @@ def get_owned_donation(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not own this donation",
+        )
+
+    return donation
+
+
+def get_viewable_donation(
+    donation_id: int,
+    current_user: User,
+    db: d_b.SessionDep,
+) -> Donation:
+    donation = db.get(Donation, donation_id)
+
+    if not donation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Donation not found",
+        )
+
+    if (
+        current_user.role != UserRole.ADMIN
+        and donation.restaurant_id != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You cannot view pickup requests for this donation",
         )
 
     return donation
@@ -149,28 +175,72 @@ def create_pickup_request(
 
 
 def get_my_pickup_requests(
-    ngo: User,
+    current_user: User,
     db: d_b.SessionDep,
-) -> list[PickupRequest]:
-    return db.exec(
+    limit: int,
+    offset: int,
+) -> schemas.PaginatedPickupRequests:
+    filters = []
+
+    if current_user.role == UserRole.NGO:
+        filters.append(PickupRequest.ngo_id == current_user.id)
+    elif current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="NGO or Admin access required",
+        )
+
+    pickup_requests_statement = (
         select(PickupRequest)
-        .where(PickupRequest.ngo_id == ngo.id)
-        .order_by(PickupRequest.requested_at)
-    ).all()
+        .where(*filters)
+        .order_by(PickupRequest.requested_at.asc(), PickupRequest.id.asc())
+        .offset(offset)
+        .limit(limit)
+    )
+
+    total_statement = select(func.count(PickupRequest.id)).where(*filters)
+
+    pickup_requests = db.exec(pickup_requests_statement).all()
+    total = db.exec(total_statement).one()
+
+    return schemas.PaginatedPickupRequests(
+        items=pickup_requests,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
 def get_donation_pickup_requests(
     donation_id: int,
-    restaurant: User,
+    current_user: User,
     db: d_b.SessionDep,
-) -> list[PickupRequest]:
-    get_owned_donation(donation_id, restaurant, db)
+    limit: int,
+    offset: int,
+) -> schemas.PaginatedPickupRequests:
+    get_viewable_donation(donation_id, current_user, db)
 
-    return db.exec(
+    filters = [PickupRequest.donation_id == donation_id]
+
+    pickup_requests_statement = (
         select(PickupRequest)
-        .where(PickupRequest.donation_id == donation_id)
-        .order_by(PickupRequest.requested_at)
-    ).all()
+        .where(*filters)
+        .order_by(PickupRequest.requested_at.asc(), PickupRequest.id.asc())
+        .offset(offset)
+        .limit(limit)
+    )
+
+    total_statement = select(func.count(PickupRequest.id)).where(*filters)
+
+    pickup_requests = db.exec(pickup_requests_statement).all()
+    total = db.exec(total_statement).one()
+
+    return schemas.PaginatedPickupRequests(
+        items=pickup_requests,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
 def accept_pickup_request(

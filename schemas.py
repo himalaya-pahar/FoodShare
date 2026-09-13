@@ -33,6 +33,35 @@ class ShowUser(BaseModel):
     area: Optional[str] = None
 
 
+class AdminUserItem(BaseModel):
+    """Operational user data that an Admin may review safely."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    full_name: str
+    organization_name: Optional[str] = None
+    email: str
+    role: UserRole
+    approval_status: ApprovalStatus
+    created_at: datetime
+
+
+class PaginatedUsers(BaseModel):
+    items: list[AdminUserItem]
+    total: int
+    limit: int
+    offset: int
+
+
+class AdminStats(BaseModel):
+    total_users: int
+    pending_users: int
+    approved_users: int
+    restaurant_users: int
+    ngo_users: int
+
+
 class ApprovalUpdate(BaseModel):
     approval_status: ApprovalStatus
 
@@ -96,6 +125,13 @@ class ShowDonation(BaseModel):
     updated_at: datetime
 
 
+class PaginatedDonations(BaseModel):
+    items: list[ShowDonation]
+    total: int
+    limit: int
+    offset: int
+
+
 
 class PickupRequestCreate(BaseModel):
     estimated_pickup_at: datetime
@@ -117,6 +153,13 @@ class ShowPickupRequest(BaseModel):
     updated_at: datetime
 
 
+class PaginatedPickupRequests(BaseModel):
+    items: list[ShowPickupRequest]
+    total: int
+    limit: int
+    offset: int
+
+
 class ShowStatusHistory(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -133,6 +176,13 @@ class ShowStatusHistory(BaseModel):
     note: Optional[str] = None
 
     created_at: datetime
+
+
+class PaginatedStatusHistory(BaseModel):
+    items: list[ShowStatusHistory]
+    total: int
+    limit: int
+    offset: int
 
 
 class ShowUserProfileImage(BaseModel):

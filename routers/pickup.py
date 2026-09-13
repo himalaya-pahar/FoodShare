@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 
 import database as d_b
 import schemas
@@ -32,31 +32,39 @@ def create_pickup_request(
 
 @router.get(
     "/pickup-requests/my",
-    response_model=list[schemas.ShowPickupRequest],
+    response_model=schemas.PaginatedPickupRequests,
 )
 def get_my_pickup_requests(
     db: d_b.SessionDep,
-    ngo: oauth2.NGODep,
+    current_user: oauth2.NGOOrAdminDep,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
 ):
     return pickup_repository.get_my_pickup_requests(
-        ngo,
-        db,
+        current_user=current_user,
+        db=db,
+        limit=limit,
+        offset=offset,
     )
 
 
 @router.get(
     "/donations/{donation_id}/pickup-requests",
-    response_model=list[schemas.ShowPickupRequest],
+    response_model=schemas.PaginatedPickupRequests,
 )
 def get_donation_pickup_requests(
     donation_id: int,
     db: d_b.SessionDep,
-    restaurant: oauth2.RestaurantDep,
+    current_user: oauth2.RestaurantOrAdminDep,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
 ):
     return pickup_repository.get_donation_pickup_requests(
-        donation_id,
-        restaurant,
-        db,
+        donation_id=donation_id,
+        current_user=current_user,
+        db=db,
+        limit=limit,
+        offset=offset,
     )
 
 

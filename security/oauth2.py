@@ -80,3 +80,39 @@ def get_current_ngo(current_user: CurrentUserDep) -> User:
 
 
 NGODep = Annotated[User, Depends(get_current_ngo)]
+
+
+def get_current_restaurant_or_admin(
+    current_user: CurrentUserDep,
+) -> User:
+    if current_user.role not in (UserRole.RESTAURANT, UserRole.ADMIN):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Restaurant or Admin access required",
+        )
+
+    return current_user
+
+
+RestaurantOrAdminDep = Annotated[
+    User,
+    Depends(get_current_restaurant_or_admin),
+]
+
+
+def get_current_ngo_or_admin(
+    current_user: CurrentUserDep,
+) -> User:
+    if current_user.role not in (UserRole.NGO, UserRole.ADMIN):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="NGO or Admin access required",
+        )
+
+    return current_user
+
+
+NGOOrAdminDep = Annotated[
+    User,
+    Depends(get_current_ngo_or_admin),
+]

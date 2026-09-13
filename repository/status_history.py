@@ -1,8 +1,10 @@
 from typing import Optional
 
 from fastapi import HTTPException, status
+from sqlalchemy import func
 from sqlmodel import Session, select
 
+import schemas
 from models import (
     AuditEntityType,
     Donation,
@@ -58,7 +60,9 @@ def get_donation_history(
     donation_id: int,
     current_user: User,
     db: Session,
-) -> list[StatusHistory]:
+    limit: int,
+    offset: int,
+) -> schemas.PaginatedStatusHistory:
     donation = db.get(Donation, donation_id)
 
     if not donation:
@@ -76,11 +80,27 @@ def get_donation_history(
             detail="You cannot view this donation history",
         )
 
-    return db.exec(
+    filters = [StatusHistory.donation_id == donation_id]
+
+    history_statement = (
         select(StatusHistory)
-        .where(StatusHistory.donation_id == donation_id)
-        .order_by(StatusHistory.created_at.desc())
-    ).all()
+        .where(*filters)
+        .order_by(StatusHistory.created_at.desc(), StatusHistory.id.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+
+    total_statement = select(func.count(StatusHistory.id)).where(*filters)
+
+    history_items = db.exec(history_statement).all()
+    total = db.exec(total_statement).one()
+
+    return schemas.PaginatedStatusHistory(
+        items=history_items,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
 def get_pickup_request_history(
@@ -132,16 +152,48 @@ def get_pickup_request_history(
 
 
 def get_my_pickup_history(
-    ngo: User,
+    current_user: User,
     db: Session,
-) -> list[StatusHistory]:
-    return db.exec(
+    limit: int,
+    offset: int,
+) -> schemas.PaginatedStatusHistory:
+    filters = []
+
+    if current_user.role == UserRole.NGO:
+        filters.append(PickupRequest.ngo_id == current_user.id)
+    elif current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="NGO or Admin access required",
+        )
+
+    history_statement = (
         select(StatusHistory)
         .join(
             PickupRequest,
             StatusHistory.pickup_request_id == PickupRequest.id,
         )
-        .where(PickupRequest.ngo_id == ngo.id)
-        .order_by(StatusHistory.created_at.desc())
-    ).all()
+        .where(*filters)
+        .order_by(StatusHistory.created_at.desc(), StatusHistory.id.desc())
+        .offset(offset)
+        .limit(limit)
+    )
 
+    total_statement = (
+        select(func.count(StatusHistory.id))
+        .join(
+            PickupRequest,
+            StatusHistory.pickup_request_id == PickupRequest.id,
+        )
+        .where(*filters)
+    )
+
+    history_items = db.exec(history_statement).all()
+    total = db.exec(total_statement).one()
+
+    return schemas.PaginatedStatusHistory(
+        items=history_items,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )

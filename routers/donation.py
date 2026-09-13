@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 
 import database as d_b
 import schemas
@@ -33,30 +33,38 @@ def create_donation(
 
 @router.get(
     "/my",
-    response_model=list[schemas.ShowDonation],
+    response_model=schemas.PaginatedDonations,
 )
 def get_my_donations(
     db: d_b.SessionDep,
-    restaurant: oauth2.RestaurantDep,
+    current_user: oauth2.RestaurantOrAdminDep,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
 ):
     return donation_repository.get_my_donations(
-        restaurant,
-        db,
+        current_user=current_user,
+        db=db,
+        limit=limit,
+        offset=offset,
     )
 
 
 @router.get(
     "/available",
-    response_model=list[schemas.ShowDonation],
+    response_model=schemas.PaginatedDonations,
 )
 def get_available_donations(
     db: d_b.SessionDep,
-    ngo: oauth2.NGODep,
+    ngo: oauth2.NGOOrAdminDep,
     area: Optional[str] = None,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
 ):
     return donation_repository.get_available_donations(
-        db,
-        area,
+        db=db,
+        area=area,
+        limit=limit,
+        offset=offset,
     )
 
 

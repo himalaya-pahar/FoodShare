@@ -1,19 +1,80 @@
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
+from sqlalchemy import func, or_
 from sqlmodel import select
 
 import database as d_b
+import schemas
 from models import ApprovalStatus, User, UserRole, Donation, PickupRequest, StatusHistory
 
 
-def get_pending_users(db: d_b.SessionDep) -> list[User]:
-    return db.exec(
+def _user_search_filters(q: str | None) -> list:
+    if not q or not q.strip():
+        return []
+
+    pattern = f"%{q.strip()}%"
+
+    return [
+        or_(
+            User.full_name.ilike(pattern),
+            User.email.ilike(pattern),
+            User.organization_name.ilike(pattern),
+        )
+    ]
+
+
+def _get_paginated_users(
+    db: d_b.SessionDep,
+    limit: int,
+    offset: int,
+    q: str | None = None,
+    pending_only: bool = False,
+) -> schemas.PaginatedUsers:
+    filters = _user_search_filters(q)
+
+    if pending_only:
+        filters.extend(
+            [
+                User.approval_status == ApprovalStatus.PENDING,
+                User.role.in_([UserRole.RESTAURANT, UserRole.NGO]),
+            ]
+        )
+
+    users_statement = (
         select(User)
-        .where(User.approval_status == ApprovalStatus.PENDING)
-        .where(User.role.in_([UserRole.RESTAURANT, UserRole.NGO]))
-        .order_by(User.created_at)
-    ).all()
+        .where(*filters)
+        .order_by(User.created_at.desc(), User.id.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+
+    total_statement = select(func.count(User.id)).where(*filters)
+
+    users = db.exec(users_statement).all()
+    total = db.exec(total_statement).one()
+
+    return schemas.PaginatedUsers(
+        items=users,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pending_users(
+    db: d_b.SessionDep,
+    limit: int,
+    offset: int,
+    q: str | None = None,
+) -> schemas.PaginatedUsers:
+    return _get_paginated_users(
+        db=db,
+        limit=limit,
+        offset=offset,
+        q=q,
+        pending_only=True,
+    )
 
 
 def update_approval_status(
@@ -60,10 +121,44 @@ def update_approval_status(
     return user
 
 
-def get_all_users(db: d_b.SessionDep) -> list[User]:
-    return db.exec(
-        select(User).order_by(User.created_at)
-    ).all()
+def get_all_users(
+    db: d_b.SessionDep,
+    limit: int,
+    offset: int,
+    q: str | None = None,
+) -> schemas.PaginatedUsers:
+    return _get_paginated_users(
+        db=db,
+        limit=limit,
+        offset=offset,
+        q=q,
+    )
+
+
+def get_admin_stats(
+    db: d_b.SessionDep,
+) -> schemas.AdminStats:
+    statement = select(
+        func.count(User.id),
+        func.count(User.id).filter(
+            User.approval_status == ApprovalStatus.PENDING
+        ),
+        func.count(User.id).filter(
+            User.approval_status == ApprovalStatus.APPROVED
+        ),
+        func.count(User.id).filter(User.role == UserRole.RESTAURANT),
+        func.count(User.id).filter(User.role == UserRole.NGO),
+    )
+
+    total, pending, approved, restaurants, ngos = db.exec(statement).one()
+
+    return schemas.AdminStats(
+        total_users=total,
+        pending_users=pending,
+        approved_users=approved,
+        restaurant_users=restaurants,
+        ngo_users=ngos,
+    )
 
 
 def delete_user(user_id: int, db: d_b.SessionDep):
