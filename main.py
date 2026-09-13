@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 import database as d_b
 import models
-from routers import admin, authenticate, donation, pickup, status_history, profile_image, donation_media
+from routers import admin, authenticate, donation, pickup, status_history, profile_image, donation_media, user
 from config import CREATE_TABLES_ON_STARTUP
 
 
@@ -35,3 +35,4 @@ app.include_router(pickup.router)
 app.include_router(status_history.router)
 app.include_router(profile_image.router)
 app.include_router(donation_media.router)
+app.include_router(user.router)
