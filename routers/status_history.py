@@ -17,10 +17,10 @@ router = APIRouter(
 )
 def my_donation_history(
     db: d_b.SessionDep,
-    restaurant: oauth2.RestaurantDep,
+    current_user: oauth2.RestaurantOrAdminDep,
 ):
     return history_repository.get_my_donation_history(
-        restaurant,
+        current_user,
         db,
     )
 
