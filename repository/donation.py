@@ -4,11 +4,18 @@ from typing import Optional
 from fastapi import HTTPException, status
 from sqlalchemy import func
 from sqlmodel import select
+from cache import invalidate_available_donations_cache
 
 import database as d_b
 import schemas
 from models import AuditEntityType, Donation, DonationStatus, User, UserRole
 from repository.status_history import add_status_history
+from cache import (
+    AVAILABLE_DONATIONS_TTL_SECONDS,
+    get_available_donations_cache_key,
+    get_cached_json,
+    set_cached_json,
+)
 
 
 def validate_schedule(
@@ -50,6 +57,7 @@ def create_donation(
     )
 
     db.commit()
+    invalidate_available_donations_cache()
     db.refresh(new_donation)
 
     return new_donation
@@ -98,7 +106,22 @@ def get_available_donations(
     limit: int = 20,
     offset: int = 0,
 ) -> schemas.PaginatedDonations:
-    filters = [Donation.status == DonationStatus.AVAILABLE]
+    cache_key = get_available_donations_cache_key(
+        area=area,
+        limit=limit,
+        offset=offset,
+    )
+
+    cached_data = get_cached_json(cache_key)
+
+    if cached_data is not None:
+        return schemas.PaginatedDonations.model_validate(
+            cached_data
+        )
+
+    filters = [
+        Donation.status == DonationStatus.AVAILABLE
+    ]
 
     if area:
         filters.append(
@@ -113,17 +136,27 @@ def get_available_donations(
         .limit(limit)
     )
 
-    total_statement = select(func.count(Donation.id)).where(*filters)
+    total_statement = select(
+        func.count(Donation.id)
+    ).where(*filters)
 
     donations = db.exec(donations_statement).all()
     total = db.exec(total_statement).one()
 
-    return schemas.PaginatedDonations(
+    response = schemas.PaginatedDonations(
         items=donations,
         total=total,
         limit=limit,
         offset=offset,
     )
+
+    set_cached_json(
+        key=cache_key,
+        value=response.model_dump(mode="json"),
+        ttl_seconds=AVAILABLE_DONATIONS_TTL_SECONDS,
+    )
+
+    return response
 
 
 def get_donation_by_id(
@@ -178,6 +211,7 @@ def update_donation(
 
     db.add(donation)
     db.commit()
+    invalidate_available_donations_cache()
     db.refresh(donation)
 
     return donation
@@ -218,6 +252,7 @@ def cancel_donation(
     )
 
     db.commit()
+    invalidate_available_donations_cache()
     db.refresh(donation)
 
     return donation

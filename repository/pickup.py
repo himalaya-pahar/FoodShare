@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, update
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
+from cache import invalidate_available_donations_cache
 
 import database as d_b
 import schemas
@@ -336,6 +337,7 @@ def accept_pickup_request(
     )
 
     db.commit()
+    invalidate_available_donations_cache()
     db.refresh(pickup_request)
 
     return pickup_request
@@ -520,6 +522,7 @@ def mark_pickup_collected(
     )
 
     db.commit()
+    invalidate_available_donations_cache()
     db.refresh(pickup_request)
 
     return pickup_request
@@ -586,6 +589,7 @@ def complete_donation(
     )
 
     db.commit()
+    invalidate_available_donations_cache()
     db.refresh(donation)
 
     return donation
