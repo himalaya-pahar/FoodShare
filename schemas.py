@@ -147,6 +147,18 @@ class PaginatedDonations(BaseModel):
     offset: int
 
 
+class ShowDonationWithRestaurant(ShowDonation):
+    restaurant_organization_name: Optional[str] = None
+    restaurant_full_name: str
+
+
+class PaginatedDonationsWithRestaurant(BaseModel):
+    items: list[ShowDonationWithRestaurant]
+    total: int
+    limit: int
+    offset: int
+
+
 
 class PickupRequestCreate(BaseModel):
     estimated_pickup_at: datetime

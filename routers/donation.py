@@ -33,7 +33,7 @@ def create_donation(
 
 @router.get(
     "/my",
-    response_model=schemas.PaginatedDonations,
+    response_model=schemas.PaginatedDonationsWithRestaurant,
 )
 def get_my_donations(
     db: d_b.SessionDep,
@@ -51,7 +51,7 @@ def get_my_donations(
 
 @router.get(
     "/available",
-    response_model=schemas.PaginatedDonations,
+    response_model=schemas.PaginatedDonationsWithRestaurant,
 )
 def get_available_donations(
     db: d_b.SessionDep,
@@ -70,14 +70,14 @@ def get_available_donations(
 
 @router.get(
     "/{donation_id}",
-    response_model=schemas.ShowDonation,
+    response_model=schemas.ShowDonationWithRestaurant,
 )
 def get_donation(
     donation_id: int,
     db: d_b.SessionDep,
     current_user: oauth2.CurrentUserDep,
 ):
-    return donation_repository.get_donation_by_id(
+    return donation_repository.get_donation_read_by_id(
         donation_id,
         db,
     )

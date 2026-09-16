@@ -11,6 +11,17 @@ from models import AuditEntityType, Donation, DonationStatus, User, UserRole
 from repository.status_history import add_status_history
 
 
+def donation_to_read_response(
+    donation: Donation,
+    restaurant: User,
+) -> schemas.ShowDonationWithRestaurant:
+    return schemas.ShowDonationWithRestaurant(
+        **donation.model_dump(),
+        restaurant_organization_name=restaurant.organization_name,
+        restaurant_full_name=restaurant.full_name,
+    )
+
+
 def validate_schedule(
     prepared_at: datetime,
     pickup_deadline: datetime,
@@ -60,7 +71,7 @@ def get_my_donations(
     db: d_b.SessionDep,
     limit: int,
     offset: int,
-) -> schemas.PaginatedDonations:
+) -> schemas.PaginatedDonationsWithRestaurant:
     filters = []
 
     if current_user.role == UserRole.RESTAURANT:
@@ -72,7 +83,8 @@ def get_my_donations(
         )
 
     donations_statement = (
-        select(Donation)
+        select(Donation, User)
+        .join(User, Donation.restaurant_id == User.id)
         .where(*filters)
         .order_by(Donation.created_at.asc(), Donation.id.asc())
         .offset(offset)
@@ -81,11 +93,14 @@ def get_my_donations(
 
     total_statement = select(func.count(Donation.id)).where(*filters)
 
-    donations = db.exec(donations_statement).all()
+    donation_rows = db.exec(donations_statement).all()
     total = db.exec(total_statement).one()
 
-    return schemas.PaginatedDonations(
-        items=donations,
+    return schemas.PaginatedDonationsWithRestaurant(
+        items=[
+            donation_to_read_response(donation, restaurant)
+            for donation, restaurant in donation_rows
+        ],
         total=total,
         limit=limit,
         offset=offset,
@@ -97,7 +112,7 @@ def get_available_donations(
     area: Optional[str] = None,
     limit: int = 20,
     offset: int = 0,
-) -> schemas.PaginatedDonations:
+) -> schemas.PaginatedDonationsWithRestaurant:
     filters = [Donation.status == DonationStatus.AVAILABLE]
 
     if area:
@@ -106,7 +121,8 @@ def get_available_donations(
         )
 
     donations_statement = (
-        select(Donation)
+        select(Donation, User)
+        .join(User, Donation.restaurant_id == User.id)
         .where(*filters)
         .order_by(Donation.pickup_deadline.asc(), Donation.id.asc())
         .offset(offset)
@@ -115,11 +131,14 @@ def get_available_donations(
 
     total_statement = select(func.count(Donation.id)).where(*filters)
 
-    donations = db.exec(donations_statement).all()
+    donation_rows = db.exec(donations_statement).all()
     total = db.exec(total_statement).one()
 
-    return schemas.PaginatedDonations(
-        items=donations,
+    return schemas.PaginatedDonationsWithRestaurant(
+        items=[
+            donation_to_read_response(donation, restaurant)
+            for donation, restaurant in donation_rows
+        ],
         total=total,
         limit=limit,
         offset=offset,
@@ -139,6 +158,26 @@ def get_donation_by_id(
         )
 
     return donation
+
+
+def get_donation_read_by_id(
+    donation_id: int,
+    db: d_b.SessionDep,
+) -> schemas.ShowDonationWithRestaurant:
+    donation_row = db.exec(
+        select(Donation, User)
+        .join(User, Donation.restaurant_id == User.id)
+        .where(Donation.id == donation_id)
+    ).first()
+
+    if not donation_row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Donation not found",
+        )
+
+    donation, restaurant = donation_row
+    return donation_to_read_response(donation, restaurant)
 
 
 def update_donation(
