@@ -217,13 +217,14 @@ def get_donation_pickup_requests(
     db: d_b.SessionDep,
     limit: int,
     offset: int,
-) -> schemas.PaginatedPickupRequests:
+) -> schemas.PaginatedDonationPickupRequests:
     get_viewable_donation(donation_id, current_user, db)
 
     filters = [PickupRequest.donation_id == donation_id]
 
     pickup_requests_statement = (
-        select(PickupRequest)
+        select(PickupRequest, User)
+        .join(User, PickupRequest.ngo_id == User.id)
         .where(*filters)
         .order_by(PickupRequest.requested_at.asc(), PickupRequest.id.asc())
         .offset(offset)
@@ -232,10 +233,19 @@ def get_donation_pickup_requests(
 
     total_statement = select(func.count(PickupRequest.id)).where(*filters)
 
-    pickup_requests = db.exec(pickup_requests_statement).all()
+    pickup_request_rows = db.exec(pickup_requests_statement).all()
     total = db.exec(total_statement).one()
 
-    return schemas.PaginatedPickupRequests(
+    pickup_requests = [
+        schemas.ShowDonationPickupRequest(
+            **pickup_request.model_dump(),
+            ngo_organization_name=ngo.organization_name,
+            ngo_full_name=ngo.full_name,
+        )
+        for pickup_request, ngo in pickup_request_rows
+    ]
+
+    return schemas.PaginatedDonationPickupRequests(
         items=pickup_requests,
         total=total,
         limit=limit,

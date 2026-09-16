@@ -175,6 +175,18 @@ class PaginatedPickupRequests(BaseModel):
     offset: int
 
 
+class ShowDonationPickupRequest(ShowPickupRequest):
+    ngo_organization_name: Optional[str] = None
+    ngo_full_name: str
+
+
+class PaginatedDonationPickupRequests(BaseModel):
+    items: list[ShowDonationPickupRequest]
+    total: int
+    limit: int
+    offset: int
+
+
 class ShowStatusHistory(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

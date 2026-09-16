@@ -50,7 +50,7 @@ def get_my_pickup_requests(
 
 @router.get(
     "/donations/{donation_id}/pickup-requests",
-    response_model=schemas.PaginatedPickupRequests,
+    response_model=schemas.PaginatedDonationPickupRequests,
 )
 def get_donation_pickup_requests(
     donation_id: int,
