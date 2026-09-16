@@ -181,7 +181,11 @@ def get_donation_journeys(
                 ),
                 food_name=donation.food_name,
                 posted_at=donation.created_at,
+                donor_user_id=donation.restaurant_id,
                 donor_organization_name=donor_name,
+                receiver_user_id=(
+                    selected_request.ngo_id if selected_request else None
+                ),
                 receiver_organization_name=receiver_name,
                 current_status=donation.status.value,
                 status_timestamps=timestamps,
@@ -328,7 +332,9 @@ def get_pickup_journeys(
                 pickup_request_id=pickup_request.id,
                 food_name=donation.food_name,
                 posted_at=donation.created_at,
+                donor_user_id=donation.restaurant_id,
                 donor_organization_name=donor_name,
+                receiver_user_id=pickup_request.ngo_id,
                 receiver_organization_name=receiver_name,
                 current_status=current_status,
                 status_timestamps=timestamps,

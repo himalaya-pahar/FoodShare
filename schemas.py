@@ -217,7 +217,9 @@ class HistoryFlow(BaseModel):
     pickup_request_id: Optional[int] = None
     food_name: str
     posted_at: datetime
+    donor_user_id: Optional[int] = None
     donor_organization_name: str
+    receiver_user_id: Optional[int] = None
     receiver_organization_name: Optional[str] = None
     current_status: str
     status_timestamps: dict[str, datetime]
