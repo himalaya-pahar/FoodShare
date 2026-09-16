@@ -66,6 +66,21 @@ class ApprovalUpdate(BaseModel):
     approval_status: ApprovalStatus
 
 
+class UserProfileUpdate(BaseModel):
+    full_name: Optional[str] = Field(
+        default=None,
+        min_length=2,
+        max_length=100,
+    )
+    organization_name: Optional[str] = Field(
+        default=None,
+        max_length=150,
+    )
+    phone: Optional[str] = Field(default=None, max_length=30)
+    address: Optional[str] = None
+    area: Optional[str] = Field(default=None, max_length=100)
+
+
 
 class DonationCreate(BaseModel):
     food_name: str = Field(min_length=2, max_length=150)
@@ -180,6 +195,24 @@ class ShowStatusHistory(BaseModel):
 
 class PaginatedStatusHistory(BaseModel):
     items: list[ShowStatusHistory]
+    total: int
+    limit: int
+    offset: int
+
+
+class HistoryFlow(BaseModel):
+    donation_id: int
+    pickup_request_id: Optional[int] = None
+    food_name: str
+    posted_at: datetime
+    donor_organization_name: str
+    receiver_organization_name: Optional[str] = None
+    current_status: str
+    status_timestamps: dict[str, datetime]
+
+
+class PaginatedHistoryFlows(BaseModel):
+    items: list[HistoryFlow]
     total: int
     limit: int
     offset: int
