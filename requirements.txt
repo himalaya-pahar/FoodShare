@@ -64,6 +64,7 @@ supabase-functions==2.31.0
 typer==0.27.2
 typing-inspection==0.4.4
 typing_extensions==4.16.0
+upstash-redis==1.8.0
 urllib3==2.7.0
 uvicorn==0.52.4
 uvloop==0.22.1
