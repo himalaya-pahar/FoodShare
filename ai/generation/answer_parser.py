@@ -1,0 +1,47 @@
+"""Answer parsing + structural validation.
+
+The LLM is asked for plain text, but we also produce a list of SourceItem
+objects by de-duplicating (document, section) pairs from the supplied hits.
+"""
+
+from __future__ import annotations
+
+from ai.api.schemas import SourceItem
+from ai.guardrails.output_validation import (
+    ensure_in_domain,
+    safe_fallback_no_evidence,
+)
+from ai.retrieval.models import RetrievalHit
+
+
+def build_sources(hits: list[RetrievalHit]) -> list[SourceItem]:
+    """De-duplicate (document, section) pairs in the order they appear."""
+    seen: set[tuple[str, str]] = set()
+    out: list[SourceItem] = []
+    for hit in hits:
+        key = (hit.document, hit.section)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(SourceItem(document=hit.document, section=hit.section))
+    return out
+
+
+def validate_answer(
+    raw_answer: str | None,
+    hits: list[RetrievalHit],
+) -> tuple[str, list[SourceItem]]:
+    """Return (final_answer, sources).
+
+    - If raw_answer is empty or None, return the safe-fallback.
+    - Otherwise, run output-validation (drift check + secret redaction).
+    - Always build sources from the supplied hits, regardless of the answer.
+    """
+    sources = build_sources(hits)
+
+    if not raw_answer or not raw_answer.strip():
+        return safe_fallback_no_evidence(), sources
+
+    final = raw_answer.strip()
+    final = ensure_in_domain(final)
+    return final, sources

@@ -520,6 +520,33 @@ Media does not appear in normal `GET` responses until the upload is completed su
 - Keep `SUPABASE_SECRET_KEY` server-only.
 - Never expose database credentials or Supabase secret keys to a frontend application.
 
+## AI Assistant
+
+The backend ships with a **read-only RAG AI Assistant** mounted at
+`POST /ai/chat`. It answers questions about how to use FoodShare and **never**
+performs any action that changes application state (no donation creation,
+no pickup requests, no account approvals, no status changes).
+
+Brief overview, configuration, and troubleshooting live in
+[`ai/README.md`](./ai/README.md). Detailed design + handoff docs are in
+[`workspace_ai_implementation/`](./workspace_ai_implementation/).
+
+Quick start:
+
+```bash
+pip install -r requirements.txt
+# The reindex script below also runs `ai.setup_db.ensure()` first, which
+# enables the `vector` extension + creates the `ai_chunks` table for you —
+# so no separate `psql` step is needed.
+# Note: the embedding model is downloaded the first time it is needed
+# (~80 MB, cached in %USERPROFILE%\.cache\huggingface\hub\ on Windows).
+python scripts/reindex_kb.py
+uvicorn main:app --reload
+```
+
+Then open `http://localhost:8000/docs`, authorize with any approved user's
+JWT, and try the **AI Assistant → POST /ai/chat** endpoint.
+
 ## License
 
 This project was created for academic software-engineering purposes.

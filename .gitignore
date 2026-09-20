@@ -7,3 +7,6 @@ __pycache__/
 *.sqlite3
 .pytest_cache/
 .vscode/
+.venv/
+create_admin.py
+workspace_ai_implementation/
