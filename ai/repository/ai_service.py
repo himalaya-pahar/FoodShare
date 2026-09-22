@@ -16,7 +16,10 @@ from ai.api.schemas import SourceItem
 from ai.generation.answer_parser import validate_answer
 from ai.generation.llm import LLMProvider, get_provider
 from ai.generation.prompt import render_prompt
-from ai.guardrails.output_validation import safe_fallback_temporary
+from ai.guardrails.output_validation import (
+    safe_fallback_no_evidence,
+    safe_fallback_temporary,
+)
 from ai.guardrails.scope_check import (
     OUT_OF_DOMAIN_REFUSAL,
     ScopeDecision,
@@ -137,7 +140,7 @@ def handle_chat(
     log_extra["hits"] = len(hits)
 
     if not hits:
-        answer = safe_fallback_temporary()  # "could not find enough info…"
+        answer = safe_fallback_no_evidence()
         store.append_turn(session, "user", message)
         store.append_turn(session, "assistant", answer)
         logger.info("chat.no_evidence %s", log_extra)

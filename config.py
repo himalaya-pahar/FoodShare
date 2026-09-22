@@ -62,7 +62,12 @@ EMBEDDING_DIM = 384  # all-MiniLM-L6-v2 produces 384-dim vectors; do not change 
 
 # Vector search
 TOP_K = int(os.getenv("AI_TOP_K", "5"))
-SIMILARITY_THRESHOLD = float(os.getenv("AI_SIMILARITY_THRESHOLD", "0.55"))
+SIMILARITY_THRESHOLD = float(os.getenv("AI_SIMILARITY_THRESHOLD", "0.40"))
+
+# pgvector ivfflat index: below this row count we skip index creation.
+# Sequential scan is faster for small tables, AND an ivfflat index built with
+# lists >> sqrt(rows) silently returns empty results for <=> queries.
+IVFFLAT_MIN_ROWS = int(os.getenv("AI_IVFFLAT_MIN_ROWS", "1000"))
 
 # Chunking
 CHUNK_SIZE = int(os.getenv("AI_CHUNK_SIZE", "800"))
