@@ -1,4 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':(exclude)ai/**' ':(exclude)ai_service/**' ':(exclude).dockerignore' ':(exclude)Dockerfile.ai' ':(exclude)requirements-ai.txt' ':(exclude)render.yaml' ':(exclude)scripts/reindex_kb.py' ':(exclude)scripts/enable_pgvector.sql' ':(exclude)README.md' ':(exclude).env.example' ':(exclude)workspace_ai_implementation/**'"
+  "ignoreCommand": "bash scripts/vercel-ignore-build.sh"
 }
