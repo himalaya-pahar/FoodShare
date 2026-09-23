@@ -14,7 +14,6 @@ from routers import (
     status_history,
     user,
 )
-from ai.api.routes import router as ai_router
 from config import CREATE_TABLES_ON_STARTUP
 
 
@@ -48,4 +47,3 @@ app.include_router(profile_image.router)
 app.include_router(donation_media.router)
 app.include_router(user.router)
 app.include_router(history.router)
-app.include_router(ai_router)

@@ -1,7 +1,7 @@
 # FoodShare AI Assistant — module guide
 
-This package implements the **v1 RAG-based AI Assistant** for the FoodShare
-backend. It is mounted into the existing FastAPI app and exposes:
+This package implements the **v1 RAG-based AI Assistant** for FoodShare. It
+runs as a separate FastAPI app in `ai_service/` and exposes:
 
 - `POST /ai/chat` — answer a question about how to use FoodShare.
 
@@ -16,9 +16,11 @@ file-level registry.
 
 ```
 React Native client
-   │ Bearer JWT
-   ▼
-FastAPI app ──► ai/api/routes.py     (POST /ai/chat, requires CurrentUserDep)
+   ├──► Vercel FoodShare API (login / core routes)
+   └──► Render AI service   (Bearer JWT, POST /ai/chat)
+                │
+                ▼
+              ai/api/routes.py        (requires CurrentUserDep)
                 │
                 ▼
               ai/repository/ai_service.py    (orchestrator)
@@ -34,9 +36,10 @@ FastAPI app ──► ai/api/routes.py     (POST /ai/chat, requires CurrentUserD
                 └──► ai/repository/sessions.py        (60-min in-memory TTL)
 ```
 
-The whole AI module is optional — if anything is misconfigured, the
-orchestrator returns a controlled fallback message and never raises to the
-user. The regular FoodShare API keeps working unchanged.
+The AI service is deployed independently from the Vercel core API. It shares
+the Supabase database for approved-user checks and pgvector retrieval. Chat
+turns remain in process memory, so a service restart can start a fresh
+conversation.
 
 ---
 
@@ -50,6 +53,7 @@ LLM_PROVIDER=gemini
 LLM_MODEL=gemini-3.5-flash-lite
 GEMINI_API_KEY=...
 EMBEDDINGS_MODEL=sentence-transformers/all-MiniLM-L6-v2
+AI_CORS_ORIGINS=*
 AI_TOP_K=5
 AI_SIMILARITY_THRESHOLD=0.55
 AI_CHUNK_SIZE=800
@@ -66,8 +70,8 @@ See `.env.example` at the project root for the full set.
 ## First-time setup
 
 ```bash
-# 1. Install the new dependencies
-pip install -r requirements.txt
+# 1. Install AI dependencies (includes core API dependencies)
+pip install -r requirements-ai.txt
 
 # 2. Reindex the knowledge base. The script first calls
 #    ai.setup_db.ensure(), which:
@@ -94,17 +98,18 @@ Produced 73 chunk(s).
 Done. Indexed 73 chunks from 5 documents in 24.6s.
 ```
 
-## Running the server
+## Running locally
 
-Nothing changes about how you start the API. The AI router is mounted the
-same way as every other router:
+Run the core API and AI service as separate processes. The core API remains
+on port 8000; the AI service listens on port 8001:
 
 ```bash
-uvicorn main:app --reload
+uvicorn main:app --reload --port 8000
+uvicorn ai_service.main:app --reload --port 8001
 ```
 
-Open `http://localhost:8000/docs`, authorize with any approved user's JWT,
-then expand the **AI Assistant** tag and try:
+Open `http://localhost:8001/docs`, authorize with a JWT issued by the core
+API, then expand the **AI Assistant** tag and try:
 
 ```json
 {
@@ -142,7 +147,9 @@ Whenever you add or change anything in `ai/knowledge_base/`:
 python scripts/reindex_kb.py
 ```
 
-This drops the existing rows and re-embeds every chunk. Safe to rerun.
+This clears the existing `ai_chunks` rows and re-embeds every chunk. The
+Render deployment runs this command before each release. It only changes the
+AI index table, not FoodShare user/donation data.
 
 ## Running tests
 

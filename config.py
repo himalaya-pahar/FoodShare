@@ -81,3 +81,11 @@ SESSION_MAX_TURNS = int(os.getenv("AI_SESSION_MAX_TURNS", "6"))
 AI_DEBUG_LOG_CONTENT = (
     os.getenv("AI_DEBUG_LOG_CONTENT", "false").lower() == "true"
 )
+
+# Comma-separated origins allowed to call the separately deployed AI service
+# from a browser. Native React Native requests do not rely on browser CORS.
+AI_CORS_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("AI_CORS_ORIGINS", "*").split(",")
+    if origin.strip()
+]

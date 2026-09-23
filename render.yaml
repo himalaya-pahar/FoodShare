@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: foodshare-ai
+    runtime: docker
+    # This plan provides 2 GB RAM for the local embedding model. Select/review
+    # the Render plan before creating the service; Render compute is billable.
+    plan: 1c-2g
+    numInstances: 1
+    dockerfilePath: ./Dockerfile.ai
+    dockerContext: .
+    preDeployCommand: python scripts/reindex_kb.py
+    healthCheckPath: /health
+    buildFilter:
+      paths:
+        - ai/**
+        - ai_service/**
+        - .dockerignore
+        - Dockerfile.ai
+        - requirements.txt
+        - requirements-ai.txt
+        - config.py
+        - database.py
+        - models.py
+        - security/**
+        - scripts/reindex_kb.py
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: ALGORITHM
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: LLM_PROVIDER
+        value: gemini
+      - key: LLM_MODEL
+        value: gemini-3.5-flash-lite
+      - key: EMBEDDINGS_MODEL
+        value: sentence-transformers/all-MiniLM-L6-v2
+      - key: AI_CORS_ORIGINS
+        value: "*"
+      - key: CREATE_TABLES_ON_STARTUP
+        value: "false"
