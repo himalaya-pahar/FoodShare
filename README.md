@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # FoodShare Backend API
 
 FoodShare is a role-based REST API for coordinating surplus-food donations between restaurants and NGOs. Administrators review accounts, restaurants publish available food, NGOs request collection, and every workflow status change is recorded for traceability.
