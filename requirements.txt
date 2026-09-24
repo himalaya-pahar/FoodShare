@@ -71,3 +71,6 @@ uvloop==0.22.1; sys_platform != 'win32'
 watchfiles==1.2.0
 websockets==14.2
 yarl==1.24.5
+google-genai==1.0.0
+pgvector==0.3.6
+

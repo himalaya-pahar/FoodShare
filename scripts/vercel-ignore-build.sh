@@ -17,10 +17,10 @@ while IFS= read -r path; do
   [ -z "$path" ] && continue
 
   case "$path" in
-    ai/*|ai_service/*|.dockerignore|Dockerfile.ai|requirements-ai.txt|render.yaml|scripts/reindex_kb.py|scripts/enable_pgvector.sql|README.md|FRONTEND_INTEGRATION_GUIDE.md|.env.example|workspace_ai_implementation/*)
+    .dockerignore|Dockerfile.ai|render.yaml|README.md|FRONTEND_INTEGRATION_GUIDE.md|.env.example|workspace_ai_implementation/*|*.md)
       ;;
     *)
-      echo "Core/shared change detected ($path); proceeding with the Vercel build."
+      echo "Deployable change detected ($path); proceeding with the Vercel build."
       exit 1
       ;;
   esac

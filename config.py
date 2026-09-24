@@ -50,15 +50,18 @@ LLM_MODEL = os.getenv("LLM_MODEL", "gemini-3.5-flash-lite")
 LLM_API_KEY = os.getenv("LLM_API_KEY")           # generic, used by provider
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")     # alias for convenience
 
-# Embeddings (local sentence-transformers; downloads the model on first use)
+# Embeddings (Gemini text-embedding-004 by default; local sentence-transformers optional)
+EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "gemini").lower()
 EMBEDDINGS_MODEL = os.getenv(
     "EMBEDDINGS_MODEL",
-    "sentence-transformers/all-MiniLM-L6-v2",
+    "text-embedding-004"
+    if EMBEDDING_PROVIDER == "gemini"
+    else "sentence-transformers/all-MiniLM-L6-v2",
 )
-# Where sentence-transformers caches model files. Override for Docker images or
-# serverless platforms where the default cache location is read-only / ephemeral.
+# Where sentence-transformers caches model files (if using local provider).
 SENTENCE_TRANSFORMERS_HOME = os.getenv("SENTENCE_TRANSFORMERS_HOME", "")
-EMBEDDING_DIM = 384  # all-MiniLM-L6-v2 produces 384-dim vectors; do not change casually
+DEFAULT_EMBEDDING_DIM = 768 if EMBEDDING_PROVIDER == "gemini" else 384
+EMBEDDING_DIM = int(os.getenv("AI_EMBEDDING_DIM", str(DEFAULT_EMBEDDING_DIM)))
 
 # Vector search
 TOP_K = int(os.getenv("AI_TOP_K", "5"))

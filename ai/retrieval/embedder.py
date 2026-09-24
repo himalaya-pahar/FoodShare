@@ -30,7 +30,14 @@ import os
 from abc import ABC, abstractmethod
 from functools import lru_cache
 
-from config import EMBEDDING_DIM, EMBEDDINGS_MODEL, SENTENCE_TRANSFORMERS_HOME
+from config import (
+    EMBEDDING_DIM,
+    EMBEDDING_PROVIDER,
+    EMBEDDINGS_MODEL,
+    GEMINI_API_KEY,
+    LLM_API_KEY,
+    SENTENCE_TRANSFORMERS_HOME,
+)
 
 
 logger = logging.getLogger("foodshare.ai.embedder")
@@ -74,7 +81,7 @@ class LocalSentenceTransformerProvider(EmbeddingProvider):
         if self._model is not None:
             return self._model
         try:
-            from sentence_transformers import SentenceTransformer
+            from sentence_transformers import SentenceTransformer  # type: ignore
         except ImportError as exc:
             raise RuntimeError(
                 "The 'sentence-transformers' Python package is not installed. "
@@ -140,6 +147,98 @@ class LocalSentenceTransformerProvider(EmbeddingProvider):
         self._cache[self._cache_key(text)] = vec
 
 
+class GeminiEmbeddingProvider(EmbeddingProvider):
+    """Cloud embedding provider using Google Gemini via google-genai SDK.
+
+    Default model: text-embedding-004 (768 dimensions).
+    Fast, serverless-friendly, and requires no local PyTorch or GPU dependencies.
+    """
+
+    def __init__(
+        self,
+        api_key: str | None = None,
+        model_name: str | None = None,
+        cache_size: int = 256,
+    ) -> None:
+        self.api_key = api_key or GEMINI_API_KEY or LLM_API_KEY or ""
+        self.model_name = model_name or EMBEDDINGS_MODEL
+        self._cache: dict[str, list[float]] = {}
+        self._cache_size = cache_size
+        self._client = None
+
+        if not self.api_key:
+            raise RuntimeError(
+                "GEMINI_API_KEY (or LLM_API_KEY) is not configured in .env. "
+                "Set it to use the Gemini embedding provider."
+            )
+
+    def _get_client(self):
+        if self._client is None:
+            try:
+                from google import genai  # type: ignore
+            except ImportError as exc:
+                raise RuntimeError(
+                    "The 'google-genai' SDK is not installed. "
+                    "Run `pip install google-genai` and try again."
+                ) from exc
+            self._client = genai.Client(api_key=self.api_key)
+        return self._client
+
+    @property
+    def dim(self) -> int:
+        return EMBEDDING_DIM
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+
+        client = self._get_client()
+        result: list[list[float]] = []
+        batch_size = 50
+
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i : i + batch_size]
+            response = client.models.embed_content(
+                model=self.model_name,
+                contents=batch,
+            )
+            embeddings = getattr(response, "embeddings", None)
+            if not embeddings:
+                if hasattr(response, "embedding"):
+                    embeddings = [response.embedding]
+                else:
+                    raise RuntimeError("Gemini embed_content returned no embeddings")
+
+            for text, emb in zip(batch, embeddings):
+                values = getattr(emb, "values", emb)
+                as_list = [float(x) for x in values]
+                result.append(as_list)
+                self._cache_put(text, as_list)
+
+        return result
+
+    def embed_query(self, text: str) -> list[float]:
+        cached = self._cache_get(text)
+        if cached is not None:
+            return cached
+        [vec] = self.embed([text])
+        return vec
+
+    # Cache helpers --------------------------------------------------------
+
+    def _cache_key(self, text: str) -> str:
+        return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+    def _cache_get(self, text: str) -> list[float] | None:
+        return self._cache.get(self._cache_key(text))
+
+    def _cache_put(self, text: str, vec: list[float]) -> None:
+        if len(self._cache) >= self._cache_size:
+            oldest = next(iter(self._cache))
+            self._cache.pop(oldest, None)
+        self._cache[self._cache_key(text)] = vec
+
+
 # ---------------------------------------------------------------------------
 # Factory
 # ---------------------------------------------------------------------------
@@ -151,7 +250,11 @@ def get_default_embedding_provider() -> EmbeddingProvider:
     """Process-wide singleton embedding provider."""
     global _provider
     if _provider is None:
-        _provider = LocalSentenceTransformerProvider()
+        provider_type = (EMBEDDING_PROVIDER or "gemini").lower()
+        if provider_type in ("sentence-transformers", "local"):
+            _provider = LocalSentenceTransformerProvider()
+        else:
+            _provider = GeminiEmbeddingProvider()
     return _provider
 
 

@@ -151,23 +151,18 @@ AI_CORS_ORIGINS=*
    - Update `role = ADMIN` and `approval_status = APPROVED`.
    - You can now log in via `POST /login` with administrator privileges.
 
-### 6. Run the Applications Locally
+### 6. Run the API Locally
 
-**Core API (Port 8000):**
 ```bash
-uvicorn main:app --reload --port 8000
-```
-Swagger UI: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-
-**AI Assistant Service (Port 8001):**
-```bash
-# First-time KB indexing
+# Optional: Index knowledge base into Supabase pgvector using Gemini embeddings
 python scripts/reindex_kb.py
 
-# Start AI service
-uvicorn ai_service.main:app --reload --port 8001
+# Start the unified FoodShare API
+uvicorn main:app --reload --port 8000
 ```
-Swagger UI: [http://127.0.0.1:8001/docs](http://127.0.0.1:8001/docs)
+
+Swagger UI: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) (includes both core API and `/ai/chat` endpoints).
+
 
 ---
 
@@ -282,29 +277,28 @@ Supabase Storage buckets are completely private. Direct uploads and reads follow
 
 ## Deployment Architecture
 
-FoodShare uses a split deployment model:
+FoodShare deploys as a single unified service on Vercel:
 
 ```text
-┌─────────────────────────┐          ┌─────────────────────────┐
-│     Core REST API       │          │   AI Assistant Service  │
-│      (FastAPI)          │          │      (FastAPI)          │
-│   Deployed on Vercel    │          │    Deployed on Render   │
-│   Port: 8000 / HTTPS    │          │    Port: 8001 / HTTPS   │
-└────────────┬────────────┘          └────────────┬────────────┘
-             │                                    │
-             │   Shared Supabase PostgreSQL DB    │
-             │   (Users, Donations, Pickups,      │
-             │    Status History, ai_chunks)      │
-             └──────────────────┬─────────────────┘
-                                │
-                     ┌──────────┴──────────┐
-                     │  Supabase Storage   │
-                     │  (Private Buckets)  │
-                     └─────────────────────┘
+┌────────────────────────────────────────────────────────┐
+│               FoodShare Backend API                    │
+│                     (FastAPI)                          │
+│               Deployed on Vercel                       │
+│      • Auth, Users, Donations, Pickups, Media          │
+│      • Grounded RAG AI Assistant (/ai/chat)            │
+└──────────────────────────┬─────────────────────────────┘
+                           │
+             ┌─────────────┴─────────────┐
+             │                           │
+  ┌──────────▼──────────┐     ┌──────────▼──────────┐
+  │ Supabase PostgreSQL │     │  Supabase Storage   │
+  │  (Data + pgvector)  │     │  (Private Buckets)  │
+  └─────────────────────┘     └─────────────────────┘
 ```
 
-1. **Vercel (Core API):** Serves all user authentication, donation management, pickup workflows, and media operations. Ignores commits affecting only AI files via `scripts/vercel-ignore-build.sh`.
-2. **Render (AI Service):** Deploys `Dockerfile.ai` as a single-instance container. Builds vector embeddings with sentence-transformers and answers user questions grounded in the knowledge base. Builds trigger only on AI or shared-file changes via `render.yaml` path filters.
+- **Vercel:** Hosts the complete REST API including the `/ai/chat` endpoint.
+- **Supabase PostgreSQL with pgvector:** Stores application data and vector chunks (`ai_chunks`).
+- **Google Gemini API:** Generates embeddings via `text-embedding-004` and answers user queries via Gemini Flash Lite.
 
 For frontend developers integrating the chat interface, refer to [`FRONTEND_INTEGRATION_GUIDE.md`](./FRONTEND_INTEGRATION_GUIDE.md).
 

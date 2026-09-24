@@ -6,19 +6,13 @@ This guide details how to integrate the FoodShare AI Assistant service into the 
 
 ## 1. Architecture & Endpoints
 
-The AI service runs as an independent microservice separate from the core FoodShare API.
+The AI Assistant is integrated directly into the main FoodShare backend API deployed on Vercel. You do **not** need a separate AI server or separate base URL.
 
-| Service | Environment | Base URL |
+| Service | Host | AI Chat Endpoint |
 |---|---|---|
-| **Core API** | Local | `http://localhost:8000` (or `http://10.0.2.2:8000` for Android emulator) |
-| **Core API** | Production | `https://your-vercel-core-api.vercel.app` |
-| **AI Service** | Local | `http://localhost:8001` (or `http://10.0.2.2:8001` for Android emulator) |
-| **AI Service** | Production | `https://your-render-ai-service.onrender.com` |
+| **FoodShare Backend API** | Vercel (`process.env.EXPO_PUBLIC_API_BASE_URL`) | `POST /ai/chat` |
 
-> **Note on Android Emulator & Physical Devices:**
-> - Android Emulator: Use `http://10.0.2.2:8001` to access `localhost:8001` on your development machine.
-> - Physical device (iOS/Android): Use your development machine's local Wi-Fi IP address (e.g., `http://192.168.1.X:8001`).
-> - iOS Simulator: Can use `http://localhost:8001` directly.
+Simply call `POST ${API_BASE_URL}/ai/chat` using your app's existing Vercel API base URL.
 
 ---
 
@@ -144,7 +138,7 @@ export interface ChatResponse {
   scope_decision: 'in_domain' | 'out_of_domain' | 'no_evidence';
 }
 
-const AI_BASE_URL = process.env.EXPO_PUBLIC_AI_API_BASE_URL || 'http://localhost:8001';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 export async function sendChatMessage(
   message: string,
@@ -159,7 +153,7 @@ export async function sendChatMessage(
     throw new Error('Message cannot exceed 1000 characters');
   }
 
-  const response = await fetch(`${AI_BASE_URL}/ai/chat`, {
+  const response = await fetch(`${API_BASE_URL}/ai/chat`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -290,11 +284,9 @@ export function useAiChat(authToken: string | null) {
 In the frontend repository's environment configuration (e.g. `.env`, `.env.development`, `.env.production`):
 
 ```env
-# Core FoodShare Backend API (Vercel)
+# Unified FoodShare API (Vercel)
 EXPO_PUBLIC_API_BASE_URL=https://your-core-api.vercel.app
-
-# AI Assistant Service (Render)
-EXPO_PUBLIC_AI_API_BASE_URL=https://foodshare-ai.onrender.com
 ```
 
-Ensure both variables are wired into your API client configurations.
+The AI Assistant endpoints (`POST /ai/chat`, `GET /health`) run on the exact same base URL as the rest of the FoodShare API.
+

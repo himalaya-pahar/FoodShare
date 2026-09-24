@@ -89,6 +89,29 @@ def _table_row_count(conn) -> int:
         return 0
 
 
+def _check_or_update_embedding_dim(conn) -> None:
+    """If ai_chunks exists but was built with a different vector dimension, recreate it."""
+    from sqlalchemy import text
+
+    try:
+        current_dim = conn.execute(
+            text(
+                "SELECT atttypmod FROM pg_attribute "
+                "WHERE attrelid = 'ai_chunks'::regclass AND attname = 'embedding';"
+            )
+        ).scalar()
+        if current_dim is not None and current_dim > 0 and current_dim != EMBEDDING_DIM:
+            logger.warning(
+                "ai_chunks embedding dimension (%d) != configured EMBEDDING_DIM (%d). Recreating table...",
+                current_dim,
+                EMBEDDING_DIM,
+            )
+            conn.execute(text("DROP TABLE IF EXISTS ai_chunks CASCADE;"))
+            conn.execute(text(SQL_CREATE_TABLE))
+    except Exception:
+        pass
+
+
 def _ivfflat_index_exists(conn) -> bool:
     """True if the ivfflat index is already present."""
     from sqlalchemy import text
@@ -122,6 +145,7 @@ def ensure() -> None:
     with d_b.engine.begin() as conn:
         conn.execute(text(SQL_CREATE_EXTENSION))
         conn.execute(text(SQL_CREATE_TABLE))
+        _check_or_update_embedding_dim(conn)
 
         rows = _table_row_count(conn)
         if rows < IVFFLAT_MIN_ROWS:

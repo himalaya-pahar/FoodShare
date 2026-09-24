@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 import database as d_b
 import models
+from ai.api.routes import router as ai_router
 from routers import (
     admin,
     authenticate,
@@ -47,3 +48,11 @@ app.include_router(profile_image.router)
 app.include_router(donation_media.router)
 app.include_router(user.router)
 app.include_router(history.router)
+app.include_router(ai_router)
+
+
+@app.get("/health", tags=["Health"], include_in_schema=False)
+def health() -> dict[str, str]:
+    """Basic liveness check."""
+    return {"status": "ok"}
+
