@@ -79,15 +79,10 @@ Example (Follow-up Turn):
 #### Response Payload
 
 ```typescript
-interface SourceItem {
-  document: string;   // e.g. "user-guide.md"
-  section: string;    // e.g. "NGO Pickup Workflow"
-}
-
 interface ChatResponse {
   session_id: string;        // UUID string to save in chat state for follow-ups
   answer: string;            // Markdown-formatted grounded assistant response
-  sources: SourceItem[];     // List of backing knowledge-base documents (can be empty)
+  sources: [];               // Deprecated compatibility field; always empty
   scope_decision: "in_domain" | "out_of_domain" | "no_evidence";
 }
 ```
@@ -97,12 +92,7 @@ Example response:
 {
   "session_id": "b132808b-6bb3-42e8-9844-325b3ea66a3f",
   "answer": "To request a pickup as an NGO, browse available donations on the Available Donations screen and submit a request with your estimated pickup time. The restaurant will review your request and can accept or reject it.",
-  "sources": [
-    {
-      "document": "user-guide.md",
-      "section": "Browse and Request Food Donations"
-    }
-  ],
+  "sources": [],
   "scope_decision": "in_domain"
 }
 ```
@@ -113,7 +103,7 @@ Example response:
 
 | Code | Meaning | Recommended Frontend Action |
 |---|---|---|
-| `200 OK` | Successful response | Render `answer` and optional `sources` chips/citations. Save `session_id` in state. |
+| `200 OK` | Successful response | Render `answer`. The legacy `sources` field is always empty. Save `session_id` in state. |
 | `401 Unauthorized` | Invalid or expired token | Trigger existing app re-login or token refresh. |
 | `403 Forbidden` | Account not yet approved | Display friendly notice: "Your account is awaiting administrator approval." |
 | `422 Unprocessable Entity` | Validation error (e.g. empty message, >1000 chars, malformed UUID) | Show inline input validation alert. |
@@ -126,15 +116,10 @@ Example response:
 ### API Client (`services/aiApi.ts`)
 
 ```typescript
-export interface SourceItem {
-  document: string;
-  section: string;
-}
-
 export interface ChatResponse {
   session_id: string;
   answer: string;
-  sources: SourceItem[];
+  sources: [];
   scope_decision: 'in_domain' | 'out_of_domain' | 'no_evidence';
 }
 
@@ -185,13 +170,12 @@ export async function sendChatMessage(
 
 ```typescript
 import { useState, useCallback } from 'react';
-import { sendChatMessage, SourceItem } from '../services/aiApi';
+import { sendChatMessage } from '../services/aiApi';
 
 export interface ChatMessage {
   id: string;
   sender: 'user' | 'assistant';
   text: string;
-  sources?: SourceItem[];
   timestamp: Date;
 }
 
@@ -234,7 +218,6 @@ export function useAiChat(authToken: string | null) {
           id: `ai-${Date.now()}`,
           sender: 'assistant',
           text: data.answer,
-          sources: data.sources,
           timestamp: new Date(),
         };
 

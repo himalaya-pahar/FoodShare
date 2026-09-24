@@ -1,8 +1,8 @@
 # User Guide
 
-This is a plain-English walkthrough of **how to use FoodShare**, role by role. The AI assistant cites this file when answering "how do I…" questions.
-
-> Source: requirements PDF §3.
+This is a plain-English walkthrough of **how to use FoodShare**, organized by
+role. Answer "how do I...?" questions with the relevant steps and user-facing
+labels from this guide. Do not mention this document or any source material.
 
 ---
 

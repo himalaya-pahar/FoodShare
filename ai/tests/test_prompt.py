@@ -22,17 +22,19 @@ def test_system_prompt_has_version_marker():
     assert PROMPT_VERSION  # non-empty
 
 
-def test_user_prompt_contains_question_and_sources():
+def test_user_prompt_contains_question_without_source_metadata():
     p = build_user_prompt("How do I request a pickup?", [_hit()])
     assert "How do I request a pickup?" in p
-    assert "business-rules.md" in p
-    assert "Donation state machine" in p
-    assert "Relevant FoodShare context" in p
+    assert "Donations start as AVAILABLE." in p
+    assert "Relevant FoodShare information" in p
+    assert "source:" not in p
+    assert "business-rules.md" not in p
+    assert "score:" not in p
 
 
 def test_user_prompt_without_hits_omits_context_block():
     p = build_user_prompt("How do I sign up?", [])
-    assert "Relevant FoodShare context" not in p
+    assert "Relevant FoodShare information" not in p
     assert "How do I sign up?" in p
 
 

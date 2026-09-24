@@ -1,8 +1,8 @@
 # Business Rules
 
-This document states the **rules** FoodShare enforces. It is the AI assistant's source of truth for any "can I..." or "what happens if..." question. If a rule is not stated here, the AI should say it does not know.
-
-> Source: requirements PDF §4, README.md, and the actual route definitions.
+This document defines the **rules** FoodShare enforces. Use these facts for
+"can I...?" and "what happens if...?" questions. If a rule is not stated
+here, explain that the available information does not specify it.
 
 ---
 

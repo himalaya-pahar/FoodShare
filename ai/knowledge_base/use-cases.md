@@ -1,8 +1,9 @@
 # Use Cases
 
-End-to-end scenarios for FoodShare, mapped to the actual API endpoints. Use this when a user asks "what should I do?" in narrative form.
-
-> Source: requirements PDF §3, cross-checked against `routers/*.py`.
+End-to-end FoodShare scenarios written as user workflows. Use these steps
+when someone asks what to do next or how a workflow proceeds. Describe the
+workflow without exposing internal endpoint names unless the user asks for
+technical details.
 
 ---
 

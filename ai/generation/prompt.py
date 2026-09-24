@@ -10,7 +10,7 @@ from __future__ import annotations
 from ai.retrieval.models import RetrievalHit
 
 
-PROMPT_VERSION = "v1"
+PROMPT_VERSION = "v2"
 
 
 SYSTEM_PROMPT = """You are the FoodShare AI Assistant.
@@ -26,8 +26,9 @@ Rules:
 3. Do not answer questions unrelated to FoodShare. If asked, respond with:
    "I can only answer questions about how to use the FoodShare application
    and its documented features."
-4. Cite the documents you used by referring to them in plain text
-   (e.g. "Source: business-rules.md, section 'Donation state machine'").
+4. Answer naturally and fluidly as a helpful human assistant. Do NOT mention
+    documents, sources, citations, context, retrieval, or the knowledge base.
+    Present the relevant facts directly and never add a "Sources" section.
 5. Do not perform any action. You cannot create donations, request pickups,
    approve accounts, or change statuses. Just explain.
 6. Be concise. Prefer short paragraphs and bullet points.
@@ -53,17 +54,17 @@ def build_user_prompt(
         parts.append("")
 
     if hits:
-        parts.append("Relevant FoodShare context:")
+        parts.append("Relevant FoodShare information:")
         for i, hit in enumerate(hits, start=1):
-            parts.append(
-                f"[{i}] (source: {hit.document}, section: {hit.section}, "
-                f"score: {hit.score:.2f})\n{hit.text}"
-            )
+            parts.append(f"Information {i}:\n{hit.text}")
         parts.append("")
 
     parts.append(f"User question: {question}")
     parts.append("")
-    parts.append("Answer using only the context above. Be concise.")
+    parts.append(
+        "Answer using only the information above. Be concise and answer directly; "
+        "do not mention where the information came from."
+    )
 
     return "\n".join(parts)
 

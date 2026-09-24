@@ -1,8 +1,7 @@
 # Frequently Asked Questions
 
-Short Q&A pairs distilled from the FoodShare requirements. The AI assistant cites these when a user's question matches an existing FAQ.
-
-> Source: requirements PDF and FoodShare code. No external facts.
+Short, direct answers to common FoodShare questions. Use the answers as
+product behavior guidance and respond in plain language.
 
 ---
 

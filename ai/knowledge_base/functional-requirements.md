@@ -1,8 +1,7 @@
 # Functional Requirements
 
-A condensed list of what FoodShare does. Use this when the user asks high-level "what is FoodShare" or "what does FoodShare support" questions.
-
-> Source: requirements PDF §2, condensed.
+A concise description of what FoodShare does. Use this for high-level
+questions such as "what is FoodShare?" and "what does FoodShare support?".
 
 ---
 

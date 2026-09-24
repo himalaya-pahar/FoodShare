@@ -38,7 +38,7 @@ class ChatRequest(BaseModel):
 
 
 class SourceItem(BaseModel):
-    """Citation returned alongside an answer."""
+    """Legacy citation shape retained for response compatibility."""
 
     document: str = Field(..., description="Knowledge-base document filename.")
     section: str = Field(..., description="Section heading inside that document.")
@@ -51,7 +51,7 @@ class ChatResponse(BaseModel):
     answer: str = Field(..., description="The assistant's grounded answer.")
     sources: list[SourceItem] = Field(
         default_factory=list,
-        description="Citations backing the answer (may be empty).",
+        description="Deprecated; always empty. Knowledge-base details stay internal.",
     )
     scope_decision: str = Field(
         ...,

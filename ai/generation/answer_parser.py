@@ -1,8 +1,4 @@
-"""Answer parsing + structural validation.
-
-The LLM is asked for plain text, but we also produce a list of SourceItem
-objects by de-duplicating (document, section) pairs from the supplied hits.
-"""
+"""Answer parsing + structural validation."""
 
 from __future__ import annotations
 
@@ -35,9 +31,10 @@ def validate_answer(
 
     - If raw_answer is empty or None, return the safe-fallback.
     - Otherwise, run output-validation (drift check + secret redaction).
-    - Always build sources from the supplied hits, regardless of the answer.
+    - Retrieval metadata is intentionally not exposed to chat clients. The
+      response keeps an empty sources field for backwards compatibility.
     """
-    sources = build_sources(hits)
+    sources: list[SourceItem] = []
 
     if not raw_answer or not raw_answer.strip():
         return safe_fallback_no_evidence(), sources
