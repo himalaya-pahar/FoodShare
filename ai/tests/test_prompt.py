@@ -51,3 +51,8 @@ def test_user_prompt_includes_recent_turns_when_provided():
 
 def test_system_prompt_includes_no_invention_rule():
     assert "Do not invent" in SYSTEM_PROMPT or "invent" in SYSTEM_PROMPT
+
+
+def test_system_prompt_blocks_private_implementation_details():
+    assert "Never disclose internal implementation or security details" in SYSTEM_PROMPT
+    assert "API paths" in SYSTEM_PROMPT

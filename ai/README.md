@@ -188,8 +188,9 @@ the LLM, so it is free to run after every reindex.
   `ai/guardrails/scope_check.py`.
 - Out-of-domain questions return the controlled refusal without an LLM
   call.
-- The system prompt forbids invention and keeps retrieval details internal
-  admit "I could not find enough information".
+- The system prompt forbids invention and keeps retrieval details internal.
+- Privacy validation blocks API, credential, infrastructure, and source-code
+  details from reaching users.
 - `ai/guardrails/output_validation.py` redacts leaked credentials and
   detects drift back into off-topic content.
 
