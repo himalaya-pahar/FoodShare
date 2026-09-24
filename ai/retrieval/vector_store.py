@@ -121,11 +121,18 @@ class SupabasePgVectorStore(VectorStore):
             """
         )
 
-        with d_b.engine.connect() as conn:
-            rows = conn.execute(
-                sql,
-                {"qvec": qvec_literal, "limit": int(top_k)},
-            ).fetchall()
+        try:
+            with d_b.engine.connect() as conn:
+                rows = conn.execute(
+                    sql,
+                    {"qvec": qvec_literal, "limit": int(top_k)},
+                ).fetchall()
+        except Exception as exc:
+            logger.error(
+                "ai_chunks query failed (has scripts/reindex_kb.py been run?): %s",
+                exc,
+            )
+            return []
 
         hits: list[RetrievalHit] = []
         for row in rows:

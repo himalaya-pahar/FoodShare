@@ -68,16 +68,30 @@ def handle_chat(
     started = time.perf_counter()
     request_id = str(uuid.uuid4())
     store = store or get_store()
-    retriever = retriever or get_default_retriever()
-    llm = llm or get_provider()
+    session = store.get_or_create(user_id, session_id)
 
     log_extra = {
         "request_id": request_id,
         "user_id": user_id,
     }
 
-    # 1. Get or create the session.
-    session = store.get_or_create(user_id, session_id)
+    try:
+        retriever = retriever or get_default_retriever()
+        llm = llm or get_provider()
+    except Exception as exc:
+        logger.error("AI service initialization failed: %s", exc)
+        answer = safe_fallback_temporary()
+        return _finalize(
+            session=session,
+            answer=answer,
+            sources=[],
+            scope_decision="no_evidence",
+            request_id=request_id,
+            started=started,
+            retrieval_count=0,
+            rewrite_method="none",
+            model="(error)",
+        )
 
     # 2. Scope check.
     scope = classify_scope(message)
@@ -120,7 +134,7 @@ def handle_chat(
     # 4. Retrieve relevant chunks.
     try:
         hits = retriever.retrieve(rewrite.rewritten_question)
-    except RuntimeError as exc:
+    except Exception as exc:
         logger.warning("retrieval failure: %s %s", exc, log_extra)
         answer = safe_fallback_temporary()
         store.append_turn(session, "user", message)
