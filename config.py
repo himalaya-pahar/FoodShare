@@ -54,7 +54,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")     # alias for convenience
 EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "gemini").lower()
 EMBEDDINGS_MODEL = os.getenv(
     "EMBEDDINGS_MODEL",
-    "text-embedding-004"
+    "gemini-embedding-001"
     if EMBEDDING_PROVIDER == "gemini"
     else "sentence-transformers/all-MiniLM-L6-v2",
 )

@@ -196,11 +196,16 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
         result: list[list[float]] = []
         batch_size = 50
 
+        from google.genai import types  # type: ignore
+
+        config = types.EmbedContentConfig(output_dimensionality=self.dim)
+
         for i in range(0, len(texts), batch_size):
             batch = texts[i : i + batch_size]
             response = client.models.embed_content(
                 model=self.model_name,
                 contents=batch,
+                config=config,
             )
             embeddings = getattr(response, "embeddings", None)
             if not embeddings:
