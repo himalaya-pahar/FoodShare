@@ -8,6 +8,11 @@ Choose Sign up, select Restaurant or NGO, enter the requested account details, a
 
 Open Login and enter the email and password used for the account. If the account is still waiting for approval, wait for the administrator's decision.
 
+## Finding food quickly
+
+Open the available donations list to find food. Filter by area to narrow the
+results, then open a donation to review its details and pickup window.
+
 ## Restaurant guide
 
 Restaurants can create donations with food details, quantity, preparation time, pickup deadline, area, address, storage notes, allergen information, images, and video. Only Available donations can be edited or cancelled.
@@ -20,6 +25,9 @@ NGOs can browse Available donations and filter them by area. Open a donation to 
 
 An NGO may withdraw its own pending request. After acceptance, collect the food and mark the pickup Collected.
 
+The estimated pickup time must be within the donation's pickup window. If a
+request is rejected, check the request status or contact the restaurant.
+
 ## Administrator guide
 
 Administrators review pending accounts, approve or reject them, view users, and remove inactive non-administrator accounts. Administrators can also inspect activity history.
@@ -31,3 +39,6 @@ Available means open for requests. Reserved means a request was accepted. Collec
 ## Media
 
 Donations can include up to five images and one video. Supported image formats are JPEG, PNG, and WebP. The supported video format is MP4. Each file can be up to 5 MB.
+
+Users can also add one profile image. Profile images can be JPEG, PNG, or WebP
+and can be up to 5 MB.
