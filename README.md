@@ -520,6 +520,35 @@ Media does not appear in normal `GET` responses until the upload is completed su
 - Keep `SUPABASE_SECRET_KEY` server-only.
 - Never expose database credentials or Supabase secret keys to a frontend application.
 
+## AI Assistant
+
+The repository includes a **read-only RAG AI Assistant** deployed separately
+from the Vercel core API. Its Render service exposes `POST /ai/chat`. It
+answers questions about how to use FoodShare and **never**
+performs any action that changes application state (no donation creation,
+no pickup requests, no account approvals, no status changes).
+
+Brief overview, configuration, and troubleshooting live in
+[`ai/README.md`](./ai/README.md). Detailed design + handoff docs are in
+[`workspace_ai_implementation/`](./workspace_ai_implementation/).
+
+Quick start:
+
+```bash
+pip install -r requirements-ai.txt
+# The reindex script below also runs `ai.setup_db.ensure()` first, which
+# enables the `vector` extension + creates the `ai_chunks` table for you —
+# so no separate `psql` step is needed.
+# The Render Docker image preloads the embedding model during its build.
+python scripts/reindex_kb.py
+uvicorn main:app --reload
+uvicorn ai_service.main:app --reload --port 8001
+```
+
+The core API runs on port 8000; the AI service runs on port 8001. Open
+`http://localhost:8001/docs`, authorize with a JWT issued by the core API,
+and try **AI Assistant → POST /ai/chat**.
+
 ## License
 
 This project was created for academic software-engineering purposes.

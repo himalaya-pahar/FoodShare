@@ -1,0 +1,150 @@
+[
+  {
+    "id": "in-domain-01",
+    "question": "How does an NGO request a pickup?",
+    "expected_doc": "use-cases.md",
+    "expected_section_contains": "pickup",
+    "type": "in_domain"
+  },
+  {
+    "id": "in-domain-02",
+    "question": "What does Reserved status mean on a donation?",
+    "expected_doc": "business-rules.md",
+    "expected_section_contains": "state machine",
+    "type": "in_domain"
+  },
+  {
+    "id": "in-domain-03",
+    "question": "How does admin approval work?",
+    "expected_doc": "user-guide.md",
+    "expected_section_contains": "admin",
+    "type": "in_domain"
+  },
+  {
+    "id": "in-domain-04",
+    "question": "How do I create a donation as a restaurant?",
+    "expected_doc": "use-cases.md",
+    "expected_section_contains": "donation",
+    "type": "in_domain"
+  },
+  {
+    "id": "in-domain-05",
+    "question": "What happens after a pickup request is accepted?",
+    "expected_doc": "business-rules.md",
+    "expected_section_contains": "acceptance",
+    "type": "in_domain"
+  },
+  {
+    "id": "in-domain-06",
+    "question": "How do I upload a profile image?",
+    "expected_doc": "user-guide.md",
+    "expected_section_contains": "profile",
+    "type": "in_domain"
+  },
+  {
+    "id": "in-domain-07",
+    "question": "What file types are accepted for donation photos?",
+    "expected_doc": "business-rules.md",
+    "expected_section_contains": "media",
+    "type": "in_domain"
+  },
+  {
+    "id": "in-domain-08",
+    "question": "How can an NGO withdraw a pickup request?",
+    "expected_doc": "use-cases.md",
+    "expected_section_contains": "withdraw",
+    "type": "in_domain"
+  },
+  {
+    "id": "in-domain-09",
+    "question": "How many profile images can a user have?",
+    "expected_doc": "business-rules.md",
+    "expected_section_contains": "media",
+    "type": "in_domain"
+  },
+  {
+    "id": "in-domain-10",
+    "question": "What is the role of an admin?",
+    "expected_doc": "functional-requirements.md",
+    "expected_section_contains": "user roles",
+    "type": "in_domain"
+  },
+
+  {
+    "id": "paraphrase-01",
+    "question": "How can I give leftover food through FoodShare?",
+    "expected_doc": "user-guide.md",
+    "expected_section_contains": "donation",
+    "type": "in_domain_paraphrase"
+  },
+  {
+    "id": "paraphrase-02",
+    "question": "How does an NGO ask to collect a donation?",
+    "expected_doc": "use-cases.md",
+    "expected_section_contains": "pickup",
+    "type": "in_domain_paraphrase"
+  },
+  {
+    "id": "paraphrase-03",
+    "question": "Can the platform kick me out if my account is bad?",
+    "expected_doc": "user-guide.md",
+    "expected_section_contains": "admin",
+    "type": "in_domain_paraphrase"
+  },
+  {
+    "id": "paraphrase-04",
+    "question": "Why was my signup rejected?",
+    "expected_doc": "business-rules.md",
+    "expected_section_contains": "account",
+    "type": "in_domain_paraphrase"
+  },
+  {
+    "id": "paraphrase-05",
+    "question": "Where can I see who picked up the donation?",
+    "expected_doc": "use-cases.md",
+    "expected_section_contains": "history",
+    "type": "in_domain_paraphrase"
+  },
+
+  {
+    "id": "out-of-domain-01",
+    "question": "Tell me a joke.",
+    "type": "out_of_domain"
+  },
+  {
+    "id": "out-of-domain-02",
+    "question": "What is the weather today?",
+    "type": "out_of_domain"
+  },
+  {
+    "id": "out-of-domain-03",
+    "question": "Explain quantum physics in 100 words.",
+    "type": "out_of_domain"
+  },
+  {
+    "id": "out-of-domain-04",
+    "question": "Should I invest in bitcoin?",
+    "type": "out_of_domain"
+  },
+  {
+    "id": "out-of-domain-05",
+    "question": "How do I cook pasta?",
+    "type": "out_of_domain"
+  },
+
+  {
+    "id": "unsupported-01",
+    "question": "How many volunteers does FoodShare assign to each donation?",
+    "type": "unsupported"
+  },
+  {
+    "id": "unsupported-02",
+    "question": "Can FoodShare deliver food via drone?",
+    "type": "unsupported"
+  },
+  {
+    "id": "unsupported-03",
+    "question": "Does FoodShare have a mobile app for iOS?",
+    "type": "unsupported_in_v1"
+  }
+]
