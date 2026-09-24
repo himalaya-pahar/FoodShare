@@ -1,156 +1,76 @@
-
-# FoodShare Backend API
-
-FoodShare is a role-based REST API for coordinating surplus-food donations between restaurants and NGOs. Administrators review accounts, restaurants publish available food, NGOs request collection, and every workflow status change is recorded for traceability.
-
-Built as a software engineering project with FastAPI, SQLModel, SQLite, and JWT authentication.
-
-## Features
-
-- Restaurant, NGO, and administrator roles with role-based authorization.
-- Account registration with administrator approval before login.
-- JWT Bearer authentication and Argon2 password hashing.
-- Donation creation, editing, cancellation, discovery, and area filtering.
-- Controlled pickup workflow: request, accept/reject, withdraw, collect, and complete.
-- Automatic rejection of competing pending requests when one request is accepted.
-- Donation and pickup-request status history for auditability.
-- Request validation for food quantity, pickup deadlines, and collection schedules.
-
-## Technology Stack
-
-- **Framework:** FastAPI
-- **ORM / database models:** SQLModel and SQLAlchemy
-- **Validation:** Pydantic
-- **Authentication:** OAuth2 Password flow and JSON Web Tokens (PyJWT)
-- **Password hashing:** pwdlib with Argon2
-- **Local database:** SQLite
-- **Server:** Uvicorn
-
-## Project Structure
-
-```text
-FoodShare/
-├── main.py                 # FastAPI app and router registration
-├── config.py               # Environment-variable configuration
-├── database.py             # Engine, session dependency, table creation
-├── models.py               # SQLModel database models and enums
-├── schemas.py              # Request and response schemas
-├── create_admin.py         # Local administrator bootstrap script
-├── routers/                # HTTP route definitions
-├── repository/             # Business logic and database operations
-├── security/               # Hashing, JWT, and authorization dependencies
-└── requirements.txt        # Pinned Python dependencies
-```
-
-## Roles and Approval
-
-| Role | Main responsibilities |
-|---|---|
-| **RESTAURANT** | Create and manage donations; review pickup requests; confirm completed collections. |
-| **NGO** | Browse available donations; request, withdraw, and mark pickups as collected. |
-| **ADMIN** | Review restaurant/NGO accounts; list users; remove inactive accounts. |
-
-Restaurant and NGO signups begin with `PENDING` approval status. An administrator must change the account to `APPROVED` before it can log in. Administrator accounts cannot be created through the public signup endpoint.
-=======
 # FoodShare API
 
-FoodShare is a role-based backend API that connects restaurants with NGOs to reduce food waste. Restaurants publish surplus food donations, NGOs request pickups, and administrators approve and manage accounts.
+FoodShare is a role-based backend REST API that connects restaurants with NGOs to reduce surplus food waste. Restaurants publish surplus food donations, NGOs request pickups, administrators approve and manage accounts, and an intelligent read-only RAG AI assistant helps users navigate guidelines, requirements, and workflows.
 
 ## Features
 
-- JWT authentication
-- Restaurant, NGO, and Administrator roles
-- Account approval workflow
-- Food donation management
-- Pickup-request workflow
-- Donation and pickup status history
-- PostgreSQL database hosted on Supabase
-- Private Supabase Storage for profile images and donation media
-- Signed upload URLs and temporary signed read URLs
-- One profile image per user
-- Up to five images and one video per donation
+- **JWT Authentication & Security:** OAuth2 password flow with JWT Bearer tokens and Argon2 password hashing.
+- **Role-Based Authorization:** Separate access levels and workflows for **Restaurant**, **NGO**, and **Administrator** users.
+- **Account Approval Workflow:** Restaurant and NGO signups start in `PENDING` state and require Administrator approval before logging in.
+- **Surplus Food Donation Management:** Creation, editing, cancellation, browsing, and area-based filtering for available food donations.
+- **Controlled Pickup Lifecycle:** Complete request workflow (request → accept/reject → withdraw → mark collected → confirm completed), with automatic rejection of competing pending requests upon acceptance.
+- **Full Audit Traceability:** Comprehensive status history tracking for both donations and pickup requests.
+- **Supabase PostgreSQL & Storage:** Hosted PostgreSQL database with private Supabase Storage buckets for user profile images and donation media.
+- **Secure Media Handling:** Client-side direct uploads via signed upload URLs and time-limited signed read URLs.
+- **RAG AI Assistant Service:** Separately deployable AI microservice providing grounded, read-only guidance on FoodShare business rules, FAQs, and platform usage.
 
 ## Tech Stack
 
-- FastAPI
-- SQLModel / SQLAlchemy
-- PostgreSQL with Psycopg
-- Supabase PostgreSQL and Storage
-- JWT Authentication
-- Uvicorn
+- **Core Framework:** FastAPI
+- **ORM / Data Models:** SQLModel and SQLAlchemy
+- **Database:** PostgreSQL with Psycopg 3 (hosted on Supabase)
+- **Object Storage:** Supabase Storage
+- **Authentication:** OAuth2 with PyJWT and pwdlib (Argon2)
+- **AI / Embeddings:** Google GenAI SDK (Gemini), sentence-transformers (`all-MiniLM-L6-v2`), pgvector
+- **Server:** Uvicorn
+- **Deployment:** Vercel (Core API) & Render (AI Service via Docker)
 
 ## User Roles
 
-| Role | Responsibilities |
+| Role | Main Responsibilities |
 |---|---|
-| Restaurant | Create donations, manage donation media, accept or reject pickup requests |
-| NGO | Browse donations, submit pickup requests, confirm collection |
-| Administrator | Approve accounts and manage users |
->>>>>>> 0afa05c (integrate Supabase storage and finalize backend setup)
+| **RESTAURANT** | Publish food donations, manage media, review/accept/reject pickup requests, confirm collection completion. |
+| **NGO** | Browse available food donations, submit and withdraw pickup requests, confirm food collection. |
+| **ADMIN** | Review and approve/reject pending accounts, monitor users, delete inactive accounts. |
 
-## Workflow
+Restaurant and NGO registrations begin with `PENDING` approval status. An Administrator must approve the account before the user can log in.
+
+## Workflow & Statuses
 
 ```text
-Restaurant creates donation
+Restaurant creates donation (AVAILABLE)
         ↓
-<<<<<<< HEAD
-AVAILABLE
-        ↓ NGO submits a pickup request
-PENDING pickup request
-        ↓ Restaurant accepts one request
-RESERVED donation + ACCEPTED request
-        ↓ NGO confirms collection
-COLLECTED donation + COLLECTED request
-        ↓ Restaurant confirms completion
-COMPLETED donation
-```
-
-At acceptance, all other pending requests for that donation are automatically rejected. An available donation can alternatively be cancelled by its restaurant owner.
-
-## Local Setup
-
-### 1. Clone and enter the project
-=======
-NGO submits pickup request
+NGO submits pickup request (PENDING)
         ↓
-Restaurant accepts one request
+Restaurant accepts one request (Donation: RESERVED, Request: ACCEPTED)
+   * All other pending requests for this donation are automatically REJECTED *
         ↓
-NGO marks pickup collected
+NGO marks pickup collected (Donation: COLLECTED, Request: COLLECTED)
         ↓
-Restaurant marks donation completed
+Restaurant marks donation completed (Donation: COMPLETED)
 ```
 
 ### Donation Statuses
-
-```text
-AVAILABLE → RESERVED → COLLECTED → COMPLETED
-```
-
-Other donation statuses:
-
-```text
-CANCELLED
-EXPIRED
-```
+- `AVAILABLE` → `RESERVED` → `COLLECTED` → `COMPLETED`
+- Alternate terminal statuses: `CANCELLED`, `EXPIRED`
 
 ### Pickup Request Statuses
+- `PENDING` → `ACCEPTED` → `COLLECTED`
+- `PENDING` → `REJECTED`
+- `PENDING` → `WITHDRAWN`
 
-```text
-PENDING → ACCEPTED → COLLECTED
-PENDING → REJECTED
-PENDING → WITHDRAWN
-```
+---
 
-## Installation
->>>>>>> 0afa05c (integrate Supabase storage and finalize backend setup)
+## Installation & Local Setup
+
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/himalaya-pahar/FoodShare.git
 cd FoodShare
-<<<<<<< HEAD
 ```
 
-### 2. Create and activate a virtual environment
+### 2. Create and Activate a Virtual Environment
 
 ```bash
 python3 -m venv venv
@@ -163,393 +83,231 @@ On Windows:
 venv\Scripts\activate
 ```
 
-### 3. Install dependencies
+### 3. Install Dependencies
+
+For the core API:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Create a local `.env` file
-
-Create `.env` in the project root. Do not commit it.
-
-```env
-DATABASE_URL=sqlite:///./foodshare.db
-SECRET_KEY=replace_with_a_long_random_secret
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-```
-
-Generate a safe local secret with:
+To run or test the AI service locally:
 
 ```bash
-python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+pip install -r requirements-ai.txt
 ```
 
-### 5. Start the API
-=======
+### 4. Configure Environment Variables
 
-python -m venv venv
-source venv/bin/activate
-
-pip install -r requirements.txt
-```
-
-## Environment Variables
-
-Create a `.env` file in the project root:
+Create a `.env` file in the project root based on `.env.example`:
 
 ```env
+# Database (PostgreSQL hosted on Supabase)
 DATABASE_URL=postgresql+psycopg://USER:PASSWORD@HOST:PORT/postgres?sslmode=require
 
+# JWT Authentication
 SECRET_KEY=replace_with_a_long_random_secret
 ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
+ACCESS_TOKEN_EXPIRE_MINUTES=60
 
+# Supabase Storage & Credentials
 SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 SUPABASE_SECRET_KEY=YOUR_SERVER_ONLY_SUPABASE_SECRET_KEY
 
+# Storage Bucket Names
 SUPABASE_PROFILE_IMAGES_BUCKET=profile-images
 SUPABASE_DONATION_MEDIA_BUCKET=donation-media
 
+# Startup Database Schema Generation
 CREATE_TABLES_ON_STARTUP=false
+
+# AI Assistant Configuration
+LLM_PROVIDER=gemini
+LLM_MODEL=gemini-3.5-flash-lite
+GEMINI_API_KEY=your_gemini_api_key_here
+EMBEDDINGS_MODEL=sentence-transformers/all-MiniLM-L6-v2
+AI_CORS_ORIGINS=*
 ```
 
-Never commit `.env`, database credentials, JWT secrets, or Supabase secret keys.
+> **Warning:** Never commit `.env`, service keys, or database credentials to version control.
 
-## Supabase Setup
+### 5. Supabase Setup
 
-Create two private Supabase Storage buckets:
+1. **Storage Buckets:** In your Supabase dashboard, create two private storage buckets:
+   - `profile-images` (allowed: JPEG, PNG, WebP; max size: 5 MB)
+   - `donation-media` (allowed: JPEG, PNG, WebP, MP4; max size: 5 MB)
 
-```text
-profile-images
-donation-media
-```
+2. **First Database Initialization:**
+   For a brand-new database without tables:
+   ```env
+   CREATE_TABLES_ON_STARTUP=true
+   ```
+   Start the core API once so SQLModel generates all tables, then revert `CREATE_TABLES_ON_STARTUP=false`.
 
-Recommended bucket settings:
+3. **Administrator Account Setup:**
+   FoodShare has no hardcoded admin credentials:
+   - Register normally via `POST /signup`.
+   - In **Supabase Dashboard → Table Editor → users**, find your account.
+   - Update `role = ADMIN` and `approval_status = APPROVED`.
+   - You can now log in via `POST /login` with administrator privileges.
 
-| Bucket | Accepted files | Maximum size |
-|---|---|---|
-| `profile-images` | JPEG, PNG, WebP | 5 MB |
-| `donation-media` | JPEG, PNG, WebP, MP4 | 5 MB |
+### 6. Run the Applications Locally
 
-## First Database Setup
-
-For a brand-new database, temporarily set:
-
-```env
-CREATE_TABLES_ON_STARTUP=true
-```
-
-Run the server once:
->>>>>>> 0afa05c (integrate Supabase storage and finalize backend setup)
-
+**Core API (Port 8000):**
 ```bash
-uvicorn main:app --reload
+uvicorn main:app --reload --port 8000
 ```
+Swagger UI: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
-<<<<<<< HEAD
-The application creates its tables automatically on startup. Open the interactive API documentation at:
-=======
-After the tables are created, change it back:
-
-```env
-CREATE_TABLES_ON_STARTUP=false
-```
-
-## Run the API
-
+**AI Assistant Service (Port 8001):**
 ```bash
-uvicorn main:app --reload
+# First-time KB indexing
+python scripts/reindex_kb.py
+
+# Start AI service
+uvicorn ai_service.main:app --reload --port 8001
 ```
+Swagger UI: [http://127.0.0.1:8001/docs](http://127.0.0.1:8001/docs)
 
-Open Swagger documentation:
->>>>>>> 0afa05c (integrate Supabase storage and finalize backend setup)
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-<<<<<<< HEAD
-## Initial Administrator
-
-Run the bootstrap script once to create or reuse the local administrator account:
-
-```bash
-python create_admin.py
-```
-
-Before any public deployment, replace the sample credentials currently in `create_admin.py` with environment-based configuration. Never use example credentials in a real deployment.
-
-## Authentication
-
-### Sign up
-
-`POST /signup` accepts JSON. Use `RESTAURANT` or `NGO` as the role.
-
-```json
-{
-  "full_name": "Green Plate Restaurant",
-  "organization_name": "Green Plate",
-  "email": "contact@greenplate.example",
-  "password": "strong-password-here",
-  "role": "RESTAURANT",
-  "phone": "+8801000000000",
-  "address": "Dhaka",
-  "area": "Dhanmondi"
-}
-```
-
-### Log in
-
-`POST /login` uses OAuth2 form data, not JSON. Put the email in the `username` field.
-
-```bash
-curl -X POST http://127.0.0.1:8000/login \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=contact@greenplate.example&password=strong-password-here"
-```
-
-Successful login returns an access token. Send it on protected endpoints:
-
-```text
-Authorization: Bearer <access_token>
-```
+---
 
 ## API Endpoints
-
-All endpoints other than signup and login require an approved account and a Bearer token.
 
 ### Authentication
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| `POST` | `/signup` | Public | Register a restaurant or NGO account. |
-| `POST` | `/login` | Public | Log in with OAuth2 form data and receive a JWT. |
+| `POST` | `/signup` | Public | Register a new Restaurant or NGO account. |
+| `POST` | `/login` | Public | Log in with OAuth2 form data (`username` = email, `password`) and receive a JWT. |
 
 ### Administration
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/admin/users/pending` | List pending restaurant and NGO accounts. |
-| `PATCH` | `/admin/users/{user_id}/approval` | Approve or reject a pending account. |
-| `GET` | `/admin/users` | List all users. |
-| `DELETE` | `/admin/users/{user_id}` | Delete an inactive non-admin account. |
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `GET` | `/admin/users/pending` | Admin | List pending restaurant and NGO accounts awaiting approval. |
+| `PATCH` | `/admin/users/{user_id}/approval` | Admin | Approve or reject a pending account. |
+| `GET` | `/admin/users` | Admin | List all registered users. |
+| `DELETE` | `/admin/users/{user_id}` | Admin | Delete an inactive non-admin user account. |
 
 ### Donations
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| `POST` | `/donations/` | Restaurant | Create a donation. |
-| `GET` | `/donations/my` | Restaurant | List the current restaurant's donations. |
-| `GET` | `/donations/available?area={area}` | NGO | Browse available donations; area is optional. |
-| `GET` | `/donations/{donation_id}` | Authenticated | View one donation. |
-| `PATCH` | `/donations/{donation_id}` | Restaurant owner | Edit an available donation. |
-| `POST` | `/donations/{donation_id}/cancel` | Restaurant owner | Cancel an available donation. |
+| `POST` | `/donations/` | Restaurant | Create a new food donation listing. |
+| `GET` | `/donations/my` | Restaurant | List donations owned by the current restaurant. |
+| `GET` | `/donations/available` | NGO | Browse available food donations (supports `?area=` query). |
+| `GET` | `/donations/{donation_id}` | Authenticated | View details of a specific donation. |
+| `PATCH` | `/donations/{donation_id}` | Restaurant Owner | Edit details of an available donation. |
+| `POST` | `/donations/{donation_id}/cancel` | Restaurant Owner | Cancel an available donation. |
 
 ### Pickup Requests
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| `POST` | `/donations/{donation_id}/pickup-requests` | NGO | Submit a pickup request. |
-| `GET` | `/pickup-requests/my` | NGO | List the current NGO's requests. |
-| `GET` | `/donations/{donation_id}/pickup-requests` | Restaurant owner | List requests for one donation. |
-| `POST` | `/pickup-requests/{request_id}/accept` | Restaurant owner | Accept one request and reserve the donation. |
-| `POST` | `/pickup-requests/{request_id}/reject` | Restaurant owner | Reject a pending request. |
-| `POST` | `/pickup-requests/{request_id}/withdraw` | NGO owner | Withdraw a pending request. |
-| `POST` | `/pickup-requests/{request_id}/collect` | NGO owner | Mark an accepted request and its donation as collected. |
-| `POST` | `/donations/{donation_id}/complete` | Restaurant owner | Confirm a collected donation as completed. |
+| `POST` | `/donations/{donation_id}/pickup-requests` | NGO | Submit a pickup request for an available donation. |
+| `GET` | `/pickup-requests/my` | NGO | List requests submitted by current NGO. |
+| `GET` | `/donations/{donation_id}/pickup-requests` | Restaurant Owner | List all pickup requests for a specific donation. |
+| `POST` | `/pickup-requests/{request_id}/accept` | Restaurant Owner | Accept request, reserve donation, and reject other requests. |
+| `POST` | `/pickup-requests/{request_id}/reject` | Restaurant Owner | Reject a pending pickup request. |
+| `POST` | `/pickup-requests/{request_id}/withdraw` | NGO Owner | Withdraw a pending pickup request. |
+| `POST` | `/pickup-requests/{request_id}/collect` | NGO Owner | Mark accepted request & donation as collected. |
+| `POST` | `/donations/{donation_id}/complete` | Restaurant Owner | Confirm a collected donation as completed. |
 
-### Status History
+### Status & Audit History
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| `GET` | `/donations/my/history` | Restaurant | View history for all owned donations. |
-| `GET` | `/donations/{donation_id}/history` | Restaurant owner or Admin | View one donation's history. |
-| `GET` | `/pickup-requests/my/history` | NGO | View history for the current NGO's requests. |
-| `GET` | `/pickup-requests/{request_id}/history` | NGO owner, Restaurant owner, or Admin | View one pickup request's history. |
+| `GET` | `/donations/my/history` | Restaurant | Audit history for all donations owned by current restaurant. |
+| `GET` | `/donations/{donation_id}/history` | Owner / Admin | Audit history for a specific donation. |
+| `GET` | `/pickup-requests/my/history` | NGO | Audit history for current NGO's pickup requests. |
+| `GET` | `/pickup-requests/{request_id}/history` | Owner / Admin | Audit history for a specific pickup request. |
 
-## Validation and Data Rules
+### Profile Image
 
-- Donation quantity must be greater than zero.
-- A donation's pickup deadline must be after its preparation time.
-- An NGO's estimated pickup time must be after the donation is posted/prepared and before its deadline.
-- An NGO can submit only one request per donation.
-- Only `AVAILABLE` donations can be edited or cancelled.
-- Only one pickup request can be accepted for a donation.
-- Workflow state changes are stored in `StatusHistory`.
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `POST` | `/profile-image/upload-url` | Authenticated | Request a temporary signed upload URL for profile photo. |
+| `POST` | `/profile-image/{image_id}/complete` | Authenticated | Confirm completion of direct upload. |
+| `GET` | `/profile-image/me` | Authenticated | Retrieve temporary signed read URL for current user's photo. |
+| `DELETE` | `/profile-image/{image_id}` | Authenticated | Delete current user's profile image. |
 
-## Database Models
+### Donation Media
 
-| Model | Purpose |
-|---|---|
-| `User` | Restaurant, NGO, and administrator accounts. |
-| `Donation` | Food donations posted by restaurants. |
-| `PickupRequest` | NGO requests to collect a donation. |
-| `StatusHistory` | Audit trail for donation and pickup-request workflow events. |
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `POST` | `/donations/{donation_id}/media/upload-url` | Restaurant Owner | Request signed upload URL for donation photo or video. |
+| `POST` | `/donation-media/{media_id}/complete` | Restaurant Owner | Confirm completion of media upload. |
+| `GET` | `/donations/{donation_id}/media` | Authenticated | List all active media with signed read URLs for a donation. |
+| `DELETE` | `/donation-media/{media_id}` | Restaurant Owner | Delete a media item from a donation. |
 
-## Deployment Notes
+### User Profile
 
-### Local SQLite
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `GET` | `/users/me` | Authenticated | Get current authenticated user profile. |
 
-SQLite is the intended local-development database:
+### AI Assistant (Standalone Service)
 
-```env
-DATABASE_URL=sqlite:///./foodshare.db
-```
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `GET` | `/health` | Public | Liveness probe for monitoring/load balancing. |
+| `POST` | `/ai/chat` | Authenticated | Multi-turn RAG chat answering questions about FoodShare. |
 
-The database file and `.env` are ignored by Git to protect local data and secrets.
-
-### Vercel demonstration deployment
-
-Vercel serverless functions cannot persist a SQLite file in the application directory. For a temporary demonstration only, configure Vercel with:
-
-```env
-DATABASE_URL=sqlite:////tmp/foodshare.db
-```
-
-Data in `/tmp` may disappear after a cold start, redeploy, or scaling event. Do not use it for real user data.
-
-For a persistent production deployment, move to a managed database and update the database driver/engine configuration accordingly. Also restrict CORS to trusted frontend origins before production use.
-
-## Security Notes
-
-- Keep `.env`, database files, access tokens, and real credentials out of Git.
-- Use a long random `SECRET_KEY` and rotate it if it is exposed.
-- Use HTTPS in deployed environments.
-- Restrict CORS origins for production rather than allowing every origin.
-- Move bootstrap administrator credentials out of source code before release.
-
-## License
-
-This repository is an academic software engineering project. Add an explicit license before using it outside the project context.
-=======
-## Administrator Setup
-
-FoodShare does not contain hardcoded administrator credentials.
-
-1. Create an account normally using `/signup`.
-2. Open **Supabase → Table Editor → users**.
-3. Find that user.
-4. Update:
-
-```text
-role = ADMIN
-approval_status = APPROVED
-```
-
-The user can now log in with their own email and password as an administrator.
-
-## Authentication Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/signup` | Create a new account |
-| POST | `/login` | Log in and receive a JWT access token |
-
-`/login` uses OAuth2 form fields:
-
-```text
-username = email address
-password = password
-```
-
-Use the returned access token as a Bearer token for protected endpoints.
-
-## Status History Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/donations/{donation_id}/history` | View donation status history |
-| GET | `/pickup-requests/my/history` | View current NGO pickup history |
-
-## Profile Image Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/profile-image/upload-url` | Request a temporary upload URL |
-| POST | `/profile-image/{image_id}/complete` | Confirm a completed upload |
-| GET | `/profile-image/me` | Get the current user's profile image |
-| DELETE | `/profile-image/{image_id}` | Delete the current user's profile image |
-
-Supported profile-image formats:
-
-```text
-image/jpeg
-image/png
-image/webp
-```
-
-## Donation Media Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/donations/{donation_id}/media/upload-url` | Request a temporary media upload URL |
-| POST | `/donation-media/{media_id}/complete` | Confirm a completed media upload |
-| GET | `/donations/{donation_id}/media` | List ready donation media |
-| DELETE | `/donation-media/{media_id}` | Delete donation media |
-
-Supported donation-media formats:
-
-```text
-image/jpeg
-image/png
-image/webp
-video/mp4
-```
+---
 
 ## Private Media Upload Flow
 
-Both Supabase Storage buckets are private.
+Supabase Storage buckets are completely private. Direct uploads and reads follow this sequence:
 
 ```text
-1. Client requests an upload URL from FastAPI
-2. FastAPI creates a PENDING media record
-3. Client uploads the file directly to Supabase Storage
-4. Client calls the complete endpoint
-5. FastAPI marks the record READY
-6. API returns a temporary signed read URL when media is requested
+1. Client calls POST .../upload-url
+2. FastAPI registers a PENDING media record in PostgreSQL and returns a signed upload URL
+3. Client uploads file directly to Supabase Storage via PUT
+4. Client calls POST .../{id}/complete
+5. FastAPI verifies existence and marks the record READY
+6. Subsequent GET requests dynamically return time-limited signed read URLs
 ```
 
-Media does not appear in normal `GET` responses until the upload is completed successfully.
+---
 
-## Deployment Notes
+## Validation & Business Rules
 
-- Configure all environment variables in the hosting provider.
-- Keep `CREATE_TABLES_ON_STARTUP=false` after the database schema exists.
-- Keep `SUPABASE_SECRET_KEY` server-only.
-- Never expose database credentials or Supabase secret keys to a frontend application.
+- **Quantities:** Donation food quantity must be strictly greater than zero.
+- **Timing:** Pickup deadline must be set after preparation time. NGO estimated pickup time must be before deadline.
+- **Concurrency:** An NGO can only submit one active request per donation. Accepting one request automatically sets all competing pending requests to `REJECTED`.
+- **Modifications:** Only donations with `AVAILABLE` status may be updated or cancelled.
+- **Auditability:** Every workflow status transition is permanently recorded in `status_history`.
 
-## AI Assistant
+---
 
-The repository includes a **read-only RAG AI Assistant** deployed separately
-from the Vercel core API. Its Render service exposes `POST /ai/chat`. It
-answers questions about how to use FoodShare and **never**
-performs any action that changes application state (no donation creation,
-no pickup requests, no account approvals, no status changes).
+## Deployment Architecture
 
-Brief overview, configuration, and troubleshooting live in
-[`ai/README.md`](./ai/README.md). Detailed design + handoff docs are in
-[`workspace_ai_implementation/`](./workspace_ai_implementation/).
+FoodShare uses a split deployment model:
 
-Quick start:
-
-```bash
-pip install -r requirements-ai.txt
-# The reindex script below also runs `ai.setup_db.ensure()` first, which
-# enables the `vector` extension + creates the `ai_chunks` table for you —
-# so no separate `psql` step is needed.
-# The Render Docker image preloads the embedding model during its build.
-python scripts/reindex_kb.py
-uvicorn main:app --reload
-uvicorn ai_service.main:app --reload --port 8001
+```text
+┌─────────────────────────┐          ┌─────────────────────────┐
+│     Core REST API       │          │   AI Assistant Service  │
+│      (FastAPI)          │          │      (FastAPI)          │
+│   Deployed on Vercel    │          │    Deployed on Render   │
+│   Port: 8000 / HTTPS    │          │    Port: 8001 / HTTPS   │
+└────────────┬────────────┘          └────────────┬────────────┘
+             │                                    │
+             │   Shared Supabase PostgreSQL DB    │
+             │   (Users, Donations, Pickups,      │
+             │    Status History, ai_chunks)      │
+             └──────────────────┬─────────────────┘
+                                │
+                     ┌──────────┴──────────┐
+                     │  Supabase Storage   │
+                     │  (Private Buckets)  │
+                     └─────────────────────┘
 ```
 
-The core API runs on port 8000; the AI service runs on port 8001. Open
-`http://localhost:8001/docs`, authorize with a JWT issued by the core API,
-and try **AI Assistant → POST /ai/chat**.
+1. **Vercel (Core API):** Serves all user authentication, donation management, pickup workflows, and media operations. Ignores commits affecting only AI files via `scripts/vercel-ignore-build.sh`.
+2. **Render (AI Service):** Deploys `Dockerfile.ai` as a single-instance container. Builds vector embeddings with sentence-transformers and answers user questions grounded in the knowledge base. Builds trigger only on AI or shared-file changes via `render.yaml` path filters.
+
+For frontend developers integrating the chat interface, refer to [`FRONTEND_INTEGRATION_GUIDE.md`](./FRONTEND_INTEGRATION_GUIDE.md).
 
 ## License
 
-This project was created for academic software-engineering purposes.
->>>>>>> 0afa05c (integrate Supabase storage and finalize backend setup)
+This project was developed for academic software engineering purposes.

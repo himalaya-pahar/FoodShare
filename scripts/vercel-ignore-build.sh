@@ -17,7 +17,7 @@ while IFS= read -r path; do
   [ -z "$path" ] && continue
 
   case "$path" in
-    ai/*|ai_service/*|.dockerignore|Dockerfile.ai|requirements-ai.txt|render.yaml|scripts/reindex_kb.py|scripts/enable_pgvector.sql|README.md|.env.example|workspace_ai_implementation/*)
+    ai/*|ai_service/*|.dockerignore|Dockerfile.ai|requirements-ai.txt|render.yaml|scripts/reindex_kb.py|scripts/enable_pgvector.sql|README.md|FRONTEND_INTEGRATION_GUIDE.md|.env.example|workspace_ai_implementation/*)
       ;;
     *)
       echo "Core/shared change detected ($path); proceeding with the Vercel build."

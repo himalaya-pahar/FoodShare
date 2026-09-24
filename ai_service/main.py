@@ -20,7 +20,7 @@ app.add_middleware(
     allow_origins=AI_CORS_ORIGINS,
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["*"],
 )
 
 app.include_router(ai_router)
