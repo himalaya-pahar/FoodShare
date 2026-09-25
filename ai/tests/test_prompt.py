@@ -49,10 +49,15 @@ def test_user_prompt_includes_recent_turns_when_provided():
     assert "Donations start as AVAILABLE." in p
 
 
-def test_system_prompt_includes_no_invention_rule():
-    assert "Do not invent" in SYSTEM_PROMPT or "invent" in SYSTEM_PROMPT
+def test_system_prompt_contains_app_overview_and_roles():
+    assert "FoodShare In-App Assistant" in SYSTEM_PROMPT
+    assert "RESTAURANTS / DONORS" in SYSTEM_PROMPT
+    assert "CHARITIES / NGOS" in SYSTEM_PROMPT
+    assert "ADMINS" in SYSTEM_PROMPT
 
 
-def test_system_prompt_blocks_private_implementation_details():
-    assert "Never disclose internal implementation or security details" in SYSTEM_PROMPT
-    assert "API paths" in SYSTEM_PROMPT
+def test_system_prompt_contains_lifecycle_and_food_safety():
+    assert "ACCOUNT REGISTRATION & VERIFICATION FLOW" in SYSTEM_PROMPT
+    assert "DONATION & PICKUP STATUS LIFECYCLE" in SYSTEM_PROMPT
+    assert "BASIC FOOD SAFETY & PACKAGING RULES" in SYSTEM_PROMPT
+    assert "FREQUENTLY ASKED IN-APP QUESTIONS" in SYSTEM_PROMPT

@@ -79,7 +79,7 @@ def sanitize(answer: str) -> str:
 # help surface, even when a model has inferred or repeated them.
 _PRIVATE_DETAIL_RE = re.compile(
     r"(?ix)"
-    r"(https?://|/v\d+/|\b(api|endpoint|route|jwt|bearer|token|secret|"
+    r"(https?://|/v\d+/|\b(api_key|endpoint|bearer\s+token|secret_key|"
     r"database|supabase|pgvector|repository|schema|source code|stack trace|"
     r"system prompt|system instruction|internal instruction|config|"
     r"knowledge\s+base|source\s+document|citation|sources\s+section)\b|"

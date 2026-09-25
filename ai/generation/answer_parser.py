@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from ai.api.schemas import SourceItem
 from ai.guardrails.output_validation import (
     ensure_in_domain,
@@ -10,22 +12,28 @@ from ai.guardrails.output_validation import (
 from ai.retrieval.models import RetrievalHit
 
 
-def build_sources(hits: list[RetrievalHit]) -> list[SourceItem]:
+def build_sources(hits: list[Any] | None = None) -> list[SourceItem]:
     """De-duplicate (document, section) pairs in the order they appear."""
+    if not hits:
+        return []
     seen: set[tuple[str, str]] = set()
     out: list[SourceItem] = []
     for hit in hits:
-        key = (hit.document, hit.section)
+        doc = getattr(hit, "document", "")
+        sec = getattr(hit, "section", "")
+        if not doc and not sec:
+            continue
+        key = (doc, sec)
         if key in seen:
             continue
         seen.add(key)
-        out.append(SourceItem(document=hit.document, section=hit.section))
+        out.append(SourceItem(document=doc, section=sec))
     return out
 
 
 def validate_answer(
     raw_answer: str | None,
-    hits: list[RetrievalHit],
+    hits: list[Any] | None = None,
 ) -> tuple[str, list[SourceItem]]:
     """Return (final_answer, sources).
 

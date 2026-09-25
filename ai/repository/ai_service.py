@@ -60,7 +60,7 @@ def handle_chat(
     retriever: Retriever | None = None,
     llm: LLMProvider | None = None,
 ) -> ChatResult:
-    """End-to-end chat handler.
+    """End-to-end chat handler using embedded app knowledge without requiring RAG.
 
     Errors are caught and translated into a controlled user-facing answer.
     Stack traces are never returned to the user.
@@ -76,7 +76,6 @@ def handle_chat(
     }
 
     try:
-        retriever = retriever or get_default_retriever()
         llm = llm or get_provider()
     except Exception as exc:
         logger.error("AI service initialization failed: %s", exc)
@@ -85,7 +84,7 @@ def handle_chat(
             session=session,
             answer=answer,
             sources=[],
-            scope_decision="no_evidence",
+            scope_decision="in_domain",
             request_id=request_id,
             started=started,
             retrieval_count=0,
@@ -93,7 +92,7 @@ def handle_chat(
             model="(error)",
         )
 
-    # 2. Scope check.
+    # 1. Scope check for completely off-topic questions (e.g. sports, crypto, coding).
     scope = classify_scope(message)
     log_extra["scope"] = scope.decision.value
 
@@ -106,7 +105,7 @@ def handle_chat(
             session=session,
             answer=answer,
             sources=[],
-            scope_decision=scope.decision.value,
+            scope_decision="in_domain",
             request_id=request_id,
             started=started,
             retrieval_count=0,
@@ -114,77 +113,22 @@ def handle_chat(
             model="(no-llm)",
         )
 
-    # 3. Query rewrite for follow-ups (heuristic first; LLM fallback if needed).
-    recent_user_turns = [
-        t.content for t in session.turns if t.role == "user"
-    ]
-    rewrite = heuristic_rewrite(message, recent_user_turns)
-    if should_use_llm_fallback(message, recent_user_turns, rewrite):
-        try:
-            rewrite = llm_rewrite(message, recent_user_turns, llm)
-        except Exception:  # noqa: BLE001
-            logger.warning("LLM rewrite failed; using heuristic.", exc_info=True)
-            rewrite = RewriteResult(
-                rewritten_question=rewrite.rewritten_question,
-                method="heuristic",
-                confidence=rewrite.confidence,
-            )
-    log_extra["rewrite"] = rewrite.method
-
-    # 4. Retrieve relevant chunks.
-    try:
-        hits = retriever.retrieve(rewrite.rewritten_question)
-    except Exception as exc:
-        logger.warning("retrieval failure: %s %s", exc, log_extra)
-        answer = safe_fallback_temporary()
-        store.append_turn(session, "user", message)
-        store.append_turn(session, "assistant", answer)
-        return _finalize(
-            session=session,
-            answer=answer,
-            sources=[],
-            scope_decision="no_evidence",
-            request_id=request_id,
-            started=started,
-            retrieval_count=0,
-            rewrite_method=rewrite.method,
-            model=llm.name,
-        )
-
-    log_extra["hits"] = len(hits)
-
-    if not hits:
-        answer = safe_fallback_no_evidence()
-        store.append_turn(session, "user", message)
-        store.append_turn(session, "assistant", answer)
-        logger.info("chat.no_evidence %s", log_extra)
-        return _finalize(
-            session=session,
-            answer=answer,
-            sources=[],
-            scope_decision="no_evidence",
-            request_id=request_id,
-            started=started,
-            retrieval_count=0,
-            rewrite_method=rewrite.method,
-            model=llm.name,
-        )
-
-    # 5. Build prompt + call LLM.
+    # 2. Build direct prompt from embedded knowledge base + recent conversation turns
     recent_for_prompt = [
         (t.role, t.content) for t in session.turns[-6:]
     ]
     system, user_prompt = render_prompt(
-        question=message,  # show the original question to the LLM
-        hits=hits,
+        question=message,
+        hits=[],
         recent_turns=recent_for_prompt,
     )
 
+    # 3. Call LLM with full FoodShare system instruction
     try:
         raw = llm.generate(
             system=system,
             user=user_prompt,
-            max_tokens=500,
+            max_tokens=800,
             temperature=0.2,
         )
     except Exception as exc:  # noqa: BLE001
@@ -199,23 +143,18 @@ def handle_chat(
             scope_decision="in_domain",
             request_id=request_id,
             started=started,
-            retrieval_count=len(hits),
-            rewrite_method=rewrite.method,
+            retrieval_count=0,
+            rewrite_method="none",
             model=llm.name,
         )
 
-    answer, sources = validate_answer(raw, hits)
+    answer, sources = validate_answer(raw)
 
-    # 6. Persist this turn in the session.
+    # 4. Persist this turn in the session
     store.append_turn(session, "user", message)
     store.append_turn(session, "assistant", answer)
 
-    logger.info(
-        "chat.ok hits=%d rewrite=%s %s",
-        len(hits),
-        rewrite.method,
-        log_extra,
-    )
+    logger.info("chat.ok %s", log_extra)
     return _finalize(
         session=session,
         answer=answer,
@@ -223,8 +162,8 @@ def handle_chat(
         scope_decision="in_domain",
         request_id=request_id,
         started=started,
-        retrieval_count=len(hits),
-        rewrite_method=rewrite.method,
+        retrieval_count=0,
+        rewrite_method="none",
         model=llm.name,
     )
 

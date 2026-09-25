@@ -48,19 +48,18 @@ IN_DOMAIN_KEYWORDS: tuple[str, ...] = (
     "profile image", "profile picture",
     # general
     "foodshare", "the app", "the application", "the platform",
-    "how do i", "how can i", "how to", "what happens", "why",
     "endpoint", "api", "route",
 )
 
 
 # Words that strongly suggest the question is off-topic.
 OUT_OF_DOMAIN_KEYWORDS: tuple[str, ...] = (
-    "weather", "temperature", "forecast",
+    "weather", "forecast",
     "joke", "funny", "meme",
     "politician", "election", "vote",
     "quantum", "relativity", "physics",
     "investment", "stock", "crypto", "bitcoin",
-    "recipe", "cook", "ingredient", "how to cook",
+    "recipe", "how to cook",
     "translate", "translation",
     "python", "javascript", "java", "rust",
     "homework", "essay",
@@ -100,6 +99,7 @@ def classify_scope(message: str) -> ScopeResult:
 
 # Controlled refusal text — kept verbatim and exportable so tests can assert.
 OUT_OF_DOMAIN_REFUSAL = (
-    "I can only answer questions about how to use the FoodShare application "
-    "and its documented features."
+    "I am the FoodShare Assistant! I'm here to help you with FoodShare donations, "
+    "pickups, account questions, and food safety guidelines. "
+    "How can I help you with FoodShare today?"
 )
