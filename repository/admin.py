@@ -29,6 +29,9 @@ def _user_search_filters(q: str | None) -> list:
             User.full_name.ilike(pattern),
             User.email.ilike(pattern),
             User.organization_name.ilike(pattern),
+            User.phone.ilike(pattern),
+            User.area.ilike(pattern),
+            User.address.ilike(pattern),
         )
     ]
 
@@ -45,7 +48,13 @@ def _get_paginated_users(
     if pending_only:
         filters.extend(
             [
-                User.status == UserStatus.PENDING_ADMIN,
+                or_(
+                    User.status.in_([UserStatus.PENDING_ADMIN, UserStatus.PENDING_EMAIL]),
+                    User.approval_status == ApprovalStatus.PENDING,
+                    User.email_verified == False,
+                ),
+                User.status != UserStatus.ACTIVE,
+                User.status != UserStatus.REJECTED,
                 User.role.in_([UserRole.RESTAURANT, UserRole.NGO]),
             ]
         )
@@ -237,7 +246,14 @@ def get_admin_stats(
     statement = select(
         func.count(User.id),
         func.count(User.id).filter(
-            User.status == UserStatus.PENDING_ADMIN
+            or_(
+                User.status.in_([UserStatus.PENDING_ADMIN, UserStatus.PENDING_EMAIL]),
+                User.approval_status == ApprovalStatus.PENDING,
+                User.email_verified == False,
+            ),
+            User.status != UserStatus.ACTIVE,
+            User.status != UserStatus.REJECTED,
+            User.role.in_([UserRole.RESTAURANT, UserRole.NGO]),
         ),
         func.count(User.id).filter(
             User.status == UserStatus.ACTIVE

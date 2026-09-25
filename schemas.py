@@ -56,6 +56,9 @@ class AdminUserItem(BaseModel):
     status: UserStatus = UserStatus.PENDING_ADMIN
     email_verified: bool = False
     approval_status: Optional[ApprovalStatus] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    area: Optional[str] = None
     created_at: datetime
 
 
