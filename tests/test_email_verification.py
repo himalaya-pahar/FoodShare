@@ -87,11 +87,12 @@ class TestEmailVerificationAndAdminApproval(unittest.TestCase):
         # Captured emails list
         self.sent_emails = []
 
-        def mock_send(to_email, full_name, raw_token):
+        def mock_send(to_email, full_name, raw_token, request_base_url=None):
             self.sent_emails.append({
                 "to_email": to_email,
                 "full_name": full_name,
                 "raw_token": raw_token,
+                "request_base_url": request_base_url,
             })
             return True
 
@@ -630,6 +631,69 @@ class TestEmailVerificationAndAdminApproval(unittest.TestCase):
         res = self.client.get("/auth/verify-email?token=   ")
         self.assertEqual(res.status_code, 400)
         self.assertIn("required", res.json()["detail"].lower())
+
+    def test_live_vercel_url_generation(self):
+        # Simulate request arriving at a live Vercel deployment host
+        headers = {
+            "x-forwarded-host": "foodshare-backend.vercel.app",
+            "x-forwarded-proto": "https",
+        }
+        res = self.client.post(
+            "/auth/signup",
+            json={
+                "full_name": "Vercel Test User",
+                "email": "vercel@user.test",
+                "password": "Password123!",
+                "role": "RESTAURANT",
+            },
+            headers=headers,
+        )
+        self.assertEqual(res.status_code, 201)
+        self.assertEqual(len(self.sent_emails), 1)
+
+        raw_token = self.sent_emails[0]["raw_token"]
+        request_base_url = self.sent_emails[0]["request_base_url"]
+        self.assertEqual(request_base_url, "https://foodshare-backend.vercel.app")
+
+        # Resolve URL using get_verification_url
+        resolved_url = email_service.get_verification_url(
+            raw_token=raw_token,
+            request_base_url=request_base_url,
+        )
+        self.assertTrue(resolved_url.startswith("https://foodshare-backend.vercel.app/verify-email?token="))
+        self.assertNotIn("localhost", resolved_url)
+
+    def test_browser_html_verification_response(self):
+        # Signup user
+        self.client.post(
+            "/auth/signup",
+            json={
+                "full_name": "Browser User",
+                "email": "browser@user.test",
+                "password": "Password123!",
+                "role": "RESTAURANT",
+            },
+        )
+        raw_token = self.sent_emails[0]["raw_token"]
+
+        # Browser clicks link: sends Accept: text/html
+        res_html = self.client.get(
+            f"/verify-email?token={raw_token}",
+            headers={"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
+        )
+        self.assertEqual(res_html.status_code, 200)
+        self.assertIn("text/html", res_html.headers["content-type"])
+        self.assertIn("Email Verified!", res_html.text)
+        self.assertIn("Administrator Review", res_html.text)
+
+        # Second click in browser shows user-friendly error page
+        res_reused = self.client.get(
+            f"/verify-email?token={raw_token}",
+            headers={"Accept": "text/html"},
+        )
+        self.assertEqual(res_reused.status_code, 400)
+        self.assertIn("text/html", res_reused.headers["content-type"])
+        self.assertIn("Link Expired or Already Used", res_reused.text)
 
 
 if __name__ == "__main__":

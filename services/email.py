@@ -4,6 +4,7 @@ Provides modular email sending functionality with Gmail SMTP for development.
 Designed with a base interface so production email providers (e.g., SendGrid, Resend, AWS SES)
 can be swapped in seamlessly without changing auth or business logic.
 """
+import html
 import logging
 import os
 import smtplib
@@ -28,6 +29,7 @@ class BaseEmailService(ABC):
         to_email: str,
         full_name: str,
         raw_token: str,
+        request_base_url: Optional[str] = None,
     ) -> bool:
         """Send account verification email to a newly registered user."""
         pass
@@ -105,6 +107,39 @@ class SMTPEmailService(BaseEmailService):
             return self._use_tls
         return (os.getenv("SMTP_USE_TLS") or "true").lower() == "true"
 
+    def get_verification_url(
+        self,
+        raw_token: str,
+        request_base_url: Optional[str] = None,
+    ) -> str:
+        """
+        Resolves the appropriate verification URL.
+        Priority:
+        1. Explicit FRONTEND_URL if set and not localhost (e.g. custom web app domain)
+        2. Active request_base_url if from a live host (e.g. Vercel deployment host)
+        3. Vercel deployment variables (VERCEL_PROJECT_PRODUCTION_URL or VERCEL_URL)
+        4. Fallback to FRONTEND_URL, request_base_url, or http://localhost:8000
+        """
+        frontend = (os.getenv("FRONTEND_URL") or getattr(config, "FRONTEND_URL", "")).rstrip("/")
+        if frontend and "localhost" not in frontend and "127.0.0.1" not in frontend:
+            return f"{frontend}/verify-email?token={raw_token}"
+
+        if request_base_url:
+            clean_base = request_base_url.rstrip("/")
+            if "localhost" not in clean_base and "127.0.0.1" not in clean_base:
+                return f"{clean_base}/verify-email?token={raw_token}"
+
+        vercel_prod = os.getenv("VERCEL_PROJECT_PRODUCTION_URL")
+        if vercel_prod:
+            return f"https://{vercel_prod.rstrip('/')}/verify-email?token={raw_token}"
+
+        vercel_url = os.getenv("VERCEL_URL")
+        if vercel_url:
+            return f"https://{vercel_url.rstrip('/')}/verify-email?token={raw_token}"
+
+        base = frontend or request_base_url or "http://localhost:8000"
+        return f"{base.rstrip('/')}/verify-email?token={raw_token}"
+
     def _render_verification_email(
         self,
         full_name: str,
@@ -113,6 +148,9 @@ class SMTPEmailService(BaseEmailService):
         """
         Renders plain text and HTML versions of the verification email.
         """
+        safe_name = html.escape(full_name)
+        safe_url = html.escape(verification_url)
+
         text_content = f"""Verify Your Email
 
 Hello {full_name},
@@ -147,7 +185,7 @@ If you did not create a FoodShare account, please ignore this email.
       <td style="padding: 36px 32px; color: #1f2937;">
         <h2 style="margin: 0 0 16px 0; color: #111827; font-size: 20px; font-weight: 600;">Verify Your Email</h2>
         <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6; color: #4b5563;">
-          Hello <strong>{full_name}</strong>,
+          Hello <strong>{safe_name}</strong>,
         </p>
         <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #4b5563;">
           Thank you for registering. Please click the button below to verify your email address.
@@ -156,7 +194,7 @@ If you did not create a FoodShare account, please ignore this email.
         <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 28px 0;">
           <tr>
             <td align="center">
-              <a href="{verification_url}" target="_blank" style="background-color: #10B981; color: #ffffff; display: inline-block; padding: 14px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);">
+              <a href="{safe_url}" target="_blank" style="background-color: #10B981; color: #ffffff; display: inline-block; padding: 14px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);">
                 Verify Email
               </a>
             </td>
@@ -172,7 +210,7 @@ If you did not create a FoodShare account, please ignore this email.
           If the button above does not work, copy and paste this link into your browser:
         </p>
         <p style="margin: 0; font-size: 12px; line-height: 1.5; word-break: break-all; color: #3b82f6;">
-          <a href="{verification_url}" style="color: #2563eb; text-decoration: underline;">{verification_url}</a>
+          <a href="{safe_url}" style="color: #2563eb; text-decoration: underline;">{safe_url}</a>
         </p>
       </td>
     </tr>
@@ -195,12 +233,16 @@ If you did not create a FoodShare account, please ignore this email.
         to_email: str,
         full_name: str,
         raw_token: str,
+        request_base_url: Optional[str] = None,
     ) -> bool:
         """
         Sends account verification email via SMTP.
         Does NOT log the raw token or credentials.
         """
-        verification_url = f"{config.FRONTEND_URL}/verify-email?token={raw_token}"
+        verification_url = self.get_verification_url(
+            raw_token=raw_token,
+            request_base_url=request_base_url,
+        )
 
         username = self.username
         password = self.password
@@ -229,6 +271,7 @@ If you did not create a FoodShare account, please ignore this email.
 
         try:
             print(f"[FoodShare Email] Connecting to {self.host}:{self.port} to send verification email to {to_email}...")
+            print(f"[FoodShare Email] Verification link: {verification_url}")
             with smtplib.SMTP(self.host, self.port, timeout=15) as server:
                 if self.use_tls:
                     server.ehlo()
@@ -240,11 +283,227 @@ If you did not create a FoodShare account, please ignore this email.
             logger.info("Verification email sent successfully to %s", to_email)
             return True
         except Exception as exc:
-            # Crucial: Log error message with type and text without logging password or raw token
             err_msg = f"[FoodShare Email] Failed to send verification email to {to_email}: {type(exc).__name__} - {exc}"
             print(err_msg)
             logger.error(err_msg)
             return False
+
+
+def render_verification_success_html(message: str, status: str) -> str:
+    """Renders a beautiful verification success landing page when user clicks email link."""
+    safe_msg = html.escape(message)
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Verified - FoodShare</title>
+  <style>
+    * {{ box-sizing: border-box; }}
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #F4F7F3;
+      margin: 0;
+      padding: 40px 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 90vh;
+    }}
+    .card {{
+      background: #FFFFFF;
+      max-width: 480px;
+      width: 100%;
+      border-radius: 24px;
+      padding: 44px 32px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(13, 59, 34, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.12);
+    }}
+    .icon-container {{
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px auto;
+    }}
+    .icon {{
+      width: 40px;
+      height: 40px;
+      color: #10B981;
+    }}
+    h1 {{
+      font-size: 24px;
+      font-weight: 800;
+      color: #17251B;
+      margin: 0 0 12px 0;
+      letter-spacing: -0.5px;
+    }}
+    p {{
+      font-size: 15px;
+      line-height: 1.6;
+      color: #526057;
+      margin: 0 0 20px 0;
+    }}
+    .badge {{
+      display: inline-block;
+      background-color: #FEF3C7;
+      color: #92400E;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 24px;
+    }}
+    .notice-box {{
+      background-color: #F0FDF4;
+      border-left: 4px solid #10B981;
+      padding: 14px 16px;
+      border-radius: 8px;
+      text-align: left;
+      font-size: 14px;
+      color: #166534;
+      line-height: 1.5;
+      margin-bottom: 28px;
+    }}
+    .btn {{
+      display: inline-block;
+      background-color: #176B43;
+      color: #FFFFFF;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 16px;
+      padding: 14px 32px;
+      border-radius: 14px;
+      box-shadow: 0 4px 14px rgba(23, 107, 67, 0.28);
+    }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon-container">
+      <svg class="icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+      </svg>
+    </div>
+    <h1>Email Verified!</h1>
+    <div class="badge">Next Step: Administrator Review</div>
+    <div class="notice-box">
+      {safe_msg}
+    </div>
+    <p>
+      Your account is now queued for administrator review. Once an administrator approves your account, you can log in to the FoodShare app with your credentials.
+    </p>
+    <a href="foodsharemobile://" class="btn">Open FoodShare App</a>
+  </div>
+</body>
+</html>"""
+
+
+def render_verification_error_html(error_message: str) -> str:
+    """Renders a friendly error page when verification token is invalid or expired."""
+    safe_err = html.escape(error_message)
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verification Error - FoodShare</title>
+  <style>
+    * {{ box-sizing: border-box; }}
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #F4F7F3;
+      margin: 0;
+      padding: 40px 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 90vh;
+    }}
+    .card {{
+      background: #FFFFFF;
+      max-width: 480px;
+      width: 100%;
+      border-radius: 24px;
+      padding: 44px 32px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(13, 59, 34, 0.08);
+      border: 1px solid rgba(180, 35, 24, 0.12);
+    }}
+    .icon-container {{
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px auto;
+    }}
+    .icon {{
+      width: 40px;
+      height: 40px;
+      color: #B42318;
+    }}
+    h1 {{
+      font-size: 22px;
+      font-weight: 800;
+      color: #17251B;
+      margin: 0 0 14px 0;
+      letter-spacing: -0.5px;
+    }}
+    p {{
+      font-size: 15px;
+      line-height: 1.6;
+      color: #526057;
+      margin: 0 0 24px 0;
+    }}
+    .error-box {{
+      background-color: #FFF0EE;
+      border-left: 4px solid #B42318;
+      padding: 14px 16px;
+      border-radius: 8px;
+      text-align: left;
+      font-size: 14px;
+      color: #B42318;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }}
+    .btn {{
+      display: inline-block;
+      background-color: #176B43;
+      color: #FFFFFF;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 16px;
+      padding: 14px 32px;
+      border-radius: 14px;
+      box-shadow: 0 4px 14px rgba(23, 107, 67, 0.28);
+    }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon-container">
+      <svg class="icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </div>
+    <h1>Link Expired or Already Used</h1>
+    <div class="error-box">
+      {safe_err}
+    </div>
+    <p>
+      This verification link is invalid, expired, or has already been used. If you have already verified your email, your account is awaiting administrator approval.
+    </p>
+    <a href="foodsharemobile://" class="btn">Open FoodShare App</a>
+  </div>
+</body>
+</html>"""
 
 
 # Default service instance for injection / direct usage

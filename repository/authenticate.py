@@ -20,7 +20,11 @@ from security.verification import (
 from services.email import email_service
 
 
-def signup(user: schemas.UserSignup, db: d_b.SessionDep) -> schemas.ShowUser:
+def signup(
+    user: schemas.UserSignup,
+    db: d_b.SessionDep,
+    request_base_url: str | None = None,
+) -> schemas.ShowUser:
     email_clean = user.email.lower().strip()
 
     existing_user = db.exec(
@@ -73,6 +77,7 @@ def signup(user: schemas.UserSignup, db: d_b.SessionDep) -> schemas.ShowUser:
         to_email=new_user.email,
         full_name=new_user.full_name,
         raw_token=raw_token,
+        request_base_url=request_base_url,
     )
     if not sent:
         print(f"[FoodShare Email] WARNING: Email delivery failed for {new_user.email}. Check terminal logs for SMTP details.")
@@ -149,6 +154,7 @@ def verify_email(
 def resend_verification(
     request_data: schemas.ResendVerificationRequest,
     db: d_b.SessionDep,
+    request_base_url: str | None = None,
 ) -> schemas.ResendVerificationResponse:
     email_clean = request_data.email.lower().strip()
 
@@ -213,6 +219,7 @@ def resend_verification(
         to_email=user.email,
         full_name=user.full_name,
         raw_token=raw_token,
+        request_base_url=request_base_url,
     )
     if not sent:
         raise HTTPException(
