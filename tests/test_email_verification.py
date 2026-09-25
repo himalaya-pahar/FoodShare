@@ -30,7 +30,7 @@ Tests:
    - Admin account signup forbidden
 """
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -694,6 +694,49 @@ class TestEmailVerificationAndAdminApproval(unittest.TestCase):
         self.assertEqual(res_reused.status_code, 400)
         self.assertIn("text/html", res_reused.headers["content-type"])
         self.assertIn("Link Expired or Already Used", res_reused.text)
+
+    def test_token_expires_after_5_minutes(self):
+        """Tokens older than 5 minutes must be rejected and invalidated."""
+        signup_res = self.client.post(
+            "/auth/signup",
+            json={
+                "full_name": "Expiring User",
+                "email": "expiring@user.test",
+                "password": "Password123!",
+                "role": "RESTAURANT",
+            },
+        )
+        self.assertEqual(signup_res.status_code, 201)
+        raw_token = self.sent_emails[0]["raw_token"]
+
+        # Simulate time moving past 5 minutes in database
+        with Session(self.test_engine) as session:
+            user = session.exec(select(User).where(User.email == "expiring@user.test")).first()
+            self.assertIsNotNone(user.verification_token_expires_at)
+            # Set expiration to 10 minutes in the past
+            user.verification_token_expires_at = datetime.now(timezone.utc) - timedelta(minutes=10)
+            session.add(user)
+            session.commit()
+
+        # Attempt verification via API
+        verify_res = self.client.get(f"/auth/verify-email?token={raw_token}")
+        self.assertEqual(verify_res.status_code, 400)
+        self.assertIn("expired", verify_res.json()["detail"].lower())
+
+        # Verify token was invalidated in database
+        with Session(self.test_engine) as session:
+            user = session.exec(select(User).where(User.email == "expiring@user.test")).first()
+            self.assertIsNone(user.verification_token_hash)
+            self.assertEqual(user.status, UserStatus.PENDING_EMAIL)
+
+        # Attempt verification via browser (Accept: text/html)
+        browser_res = self.client.get(
+            f"/verify-email?token={raw_token}",
+            headers={"Accept": "text/html"},
+        )
+        self.assertEqual(browser_res.status_code, 400)
+        self.assertIn("text/html", browser_res.headers["content-type"])
+        self.assertIn("Link Expired or Already Used", browser_res.text)
 
 
 if __name__ == "__main__":

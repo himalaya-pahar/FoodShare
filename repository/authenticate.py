@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
@@ -8,6 +8,7 @@ from sqlmodel import select
 from config import (
     VERIFICATION_RESEND_COOLDOWN_SECONDS,
     VERIFICATION_TOKEN_EXPIRE_HOURS,
+    VERIFICATION_TOKEN_EXPIRE_MINUTES,
 )
 import database as d_b
 from models import ApprovalStatus, User, UserRole, UserStatus, utc_now
@@ -46,6 +47,7 @@ def signup(
     # Generate cryptographically secure single-use verification token
     raw_token, token_hash = generate_verification_token()
     now = utc_now()
+    expires_at = now + timedelta(minutes=VERIFICATION_TOKEN_EXPIRE_MINUTES)
 
     new_user = User(
         full_name=user.full_name.strip(),
@@ -58,7 +60,7 @@ def signup(
         email_verified_at=None,
         verification_token_hash=token_hash,
         last_verification_sent_at=now,
-        verification_token_expires_at=None,  # Disabled for development phase
+        verification_token_expires_at=expires_at,
         approval_status=ApprovalStatus.PENDING,
         phone=user.phone.strip() if user.phone else None,
         address=user.address.strip() if user.address else None,
@@ -111,6 +113,7 @@ def verify_email(
     # If the user is already verified and active
     if user.status == UserStatus.ACTIVE:
         user.verification_token_hash = None
+        user.verification_token_expires_at = None
         db.add(user)
         db.commit()
         return schemas.VerifyEmailResponse(
@@ -119,25 +122,31 @@ def verify_email(
             status=user.status,
         )
 
-    # Optional development hook: if expiration is configured in production
-    if VERIFICATION_TOKEN_EXPIRE_HOURS > 0 and user.verification_token_expires_at:
-        now = utc_now()
-        if user.verification_token_expires_at < now:
+    # Check 5-minute token expiration
+    now = utc_now()
+    if user.verification_token_expires_at:
+        token_expires_at = user.verification_token_expires_at
+        if token_expires_at.tzinfo is None:
+            token_expires_at = token_expires_at.replace(tzinfo=timezone.utc)
+        if now > token_expires_at:
             user.verification_token_hash = None
+            user.verification_token_expires_at = None
+            user.updated_at = now
             db.add(user)
             db.commit()
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Verification token has expired. Please request a new verification email.",
+                detail=f"Verification link has expired (valid for {VERIFICATION_TOKEN_EXPIRE_MINUTES} minutes). Please request a new verification email from the app.",
             )
 
     # Valid token: update status to pending_admin, set email_verified, and invalidate token
-    now = utc_now()
     user.email_verified = True
     user.email_verified_at = now
     user.status = UserStatus.PENDING_ADMIN
     user.approval_status = ApprovalStatus.PENDING
     user.verification_token_hash = None  # Invalidate immediately - single use
+    user.verification_token_expires_at = None
+    user.updated_at = now
     user.updated_at = now
 
     db.add(user)
@@ -209,6 +218,7 @@ def resend_verification(
     # Generate new secure token and invalidate previous one
     raw_token, token_hash = generate_verification_token()
     user.verification_token_hash = token_hash
+    user.verification_token_expires_at = now + timedelta(minutes=VERIFICATION_TOKEN_EXPIRE_MINUTES)
     user.last_verification_sent_at = now
     user.updated_at = now
 

@@ -58,8 +58,12 @@ VERIFICATION_RESEND_COOLDOWN_SECONDS = int(
     os.getenv("VERIFICATION_RESEND_COOLDOWN_SECONDS", "60")
 )
 
-# Development phase: token expiration is 0 (disabled).
-# When ready for production, set to e.g. 24 (hours).
+# Verification token expiration in minutes (default 5 minutes)
+VERIFICATION_TOKEN_EXPIRE_MINUTES = int(
+    os.getenv("VERIFICATION_TOKEN_EXPIRE_MINUTES", "5")
+)
+
+# Backwards compatibility alias for existing code
 VERIFICATION_TOKEN_EXPIRE_HOURS = int(
     os.getenv("VERIFICATION_TOKEN_EXPIRE_HOURS", "0")
 )

@@ -151,7 +151,7 @@ class SMTPEmailService(BaseEmailService):
         safe_name = html.escape(full_name)
         safe_url = html.escape(verification_url)
 
-        text_content = f"""Verify Your Email
+        text_content = f"""Verify Your Email - FoodShare
 
 Hello {full_name},
 
@@ -159,6 +159,8 @@ Thank you for registering with FoodShare.
 
 Please click the link below to verify your email address:
 {verification_url}
+
+Please note: This verification link expires in 5 minutes.
 
 After verification, your account will be reviewed by an administrator.
 
@@ -172,53 +174,45 @@ If you did not create a FoodShare account, please ignore this email.
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Verify Your Email</title>
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6f8; margin: 0; padding: 30px 15px;">
-  <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 580px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
-    <!-- Header -->
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #fafafa; margin: 0; padding: 40px 16px; color: #111827;">
+  <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 460px; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
     <tr>
-      <td style="background-color: #10B981; padding: 28px 32px; text-align: center;">
-        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">FoodShare</h1>
-      </td>
-    </tr>
-    <!-- Content -->
-    <tr>
-      <td style="padding: 36px 32px; color: #1f2937;">
-        <h2 style="margin: 0 0 16px 0; color: #111827; font-size: 20px; font-weight: 600;">Verify Your Email</h2>
-        <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6; color: #4b5563;">
+      <td style="padding: 32px 28px;">
+        <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #9ca3af; margin-bottom: 20px;">FoodShare</div>
+        <h1 style="margin: 0 0 12px 0; color: #111827; font-size: 20px; font-weight: 600; letter-spacing: -0.02em;">Verify your email</h1>
+        <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #4b5563;">
           Hello <strong>{safe_name}</strong>,
         </p>
-        <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #4b5563;">
-          Thank you for registering. Please click the button below to verify your email address.
+        <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 1.6; color: #4b5563;">
+          Please confirm your email address to continue setting up your account. <strong>This link expires in 5 minutes.</strong>
         </p>
         <!-- CTA Button -->
-        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 28px 0;">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 24px 0;">
           <tr>
-            <td align="center">
-              <a href="{safe_url}" target="_blank" style="background-color: #10B981; color: #ffffff; display: inline-block; padding: 14px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);">
-                Verify Email
+            <td>
+              <a href="{safe_url}" target="_blank" style="background-color: #111827; color: #ffffff; display: block; text-align: center; padding: 12px 20px; font-size: 14px; font-weight: 500; text-decoration: none; border-radius: 8px;">
+                Verify Email Address
               </a>
             </td>
           </tr>
         </table>
-        <!-- Notice -->
-        <div style="background-color: #f0fdf4; border-left: 4px solid #10B981; padding: 14px 16px; border-radius: 4px; margin: 24px 0;">
-          <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #166534;">
-            <strong>Next step:</strong> After verification, your account will be reviewed by an administrator.
+        <p style="margin: 0 0 20px 0; font-size: 13px; line-height: 1.5; color: #6b7280;">
+          After verification, your account will be reviewed by an administrator.
+        </p>
+        <div style="border-top: 1px solid #f3f4f6; padding-top: 16px; margin-top: 24px;">
+          <p style="margin: 0 0 6px 0; font-size: 12px; color: #9ca3af;">
+            Button not working? Paste this link into your browser:
+          </p>
+          <p style="margin: 0; font-size: 12px; line-height: 1.4; word-break: break-all;">
+            <a href="{safe_url}" style="color: #2563eb; text-decoration: none;">{safe_url}</a>
           </p>
         </div>
-        <p style="margin: 28px 0 8px 0; font-size: 13px; line-height: 1.5; color: #6b7280;">
-          If the button above does not work, copy and paste this link into your browser:
-        </p>
-        <p style="margin: 0; font-size: 12px; line-height: 1.5; word-break: break-all; color: #3b82f6;">
-          <a href="{safe_url}" style="color: #2563eb; text-decoration: underline;">{safe_url}</a>
-        </p>
       </td>
     </tr>
-    <!-- Footer -->
     <tr>
-      <td style="background-color: #f9fafb; padding: 20px 32px; text-align: center; border-top: 1px solid #e5e7eb;">
+      <td style="background-color: #f9fafb; padding: 16px 28px; text-align: center; border-top: 1px solid #f3f4f6;">
         <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-          If you did not create a FoodShare account, you can safely ignore this email.
+          If you didn't create a FoodShare account, please ignore this email.
         </p>
       </td>
     </tr>
@@ -290,7 +284,7 @@ If you did not create a FoodShare account, please ignore this email.
 
 
 def render_verification_success_html(message: str, status: str) -> str:
-    """Renders a beautiful verification success landing page when user clicks email link."""
+    """Renders a minimal, modern verification success landing page."""
     safe_msg = html.escape(message)
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -299,112 +293,120 @@ def render_verification_success_html(message: str, status: str) -> str:
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Email Verified - FoodShare</title>
   <style>
-    * {{ box-sizing: border-box; }}
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
     body {{
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background-color: #F4F7F3;
-      margin: 0;
-      padding: 40px 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #FAFAFA;
+      color: #111827;
+      min-height: 100vh;
       display: flex;
-      justify-content: center;
       align-items: center;
-      min-height: 90vh;
+      justify-content: center;
+      padding: 24px 16px;
+      -webkit-font-smoothing: antialiased;
     }}
     .card {{
       background: #FFFFFF;
-      max-width: 480px;
       width: 100%;
-      border-radius: 24px;
-      padding: 44px 32px;
+      max-width: 380px;
+      border: 1px solid #E5E7EB;
+      border-radius: 16px;
+      padding: 36px 28px;
       text-align: center;
-      box-shadow: 0 10px 30px rgba(13, 59, 34, 0.08);
-      border: 1px solid rgba(16, 185, 129, 0.12);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 6px 16px rgba(0, 0, 0, 0.02);
     }}
-    .icon-container {{
-      width: 76px;
-      height: 76px;
+    .brand {{
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #9CA3AF;
+      margin-bottom: 24px;
+    }}
+    .icon-wrap {{
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+      background-color: #ECFDF5;
+      border: 1px solid #D1FAE5;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 24px auto;
+      margin: 0 auto 18px auto;
     }}
     .icon {{
-      width: 40px;
-      height: 40px;
-      color: #10B981;
+      width: 22px;
+      height: 22px;
+      color: #059669;
     }}
     h1 {{
-      font-size: 24px;
-      font-weight: 800;
-      color: #17251B;
-      margin: 0 0 12px 0;
-      letter-spacing: -0.5px;
-    }}
-    p {{
-      font-size: 15px;
-      line-height: 1.6;
-      color: #526057;
-      margin: 0 0 20px 0;
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: #111827;
+      margin-bottom: 8px;
     }}
     .badge {{
       display: inline-block;
-      background-color: #FEF3C7;
-      color: #92400E;
-      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #4B5563;
+      background: #F3F4F6;
+      border: 1px solid #E5E7EB;
+      padding: 3px 10px;
       border-radius: 9999px;
-      font-size: 13px;
-      font-weight: 700;
-      margin-bottom: 24px;
+      margin-bottom: 16px;
     }}
-    .notice-box {{
-      background-color: #F0FDF4;
-      border-left: 4px solid #10B981;
-      padding: 14px 16px;
-      border-radius: 8px;
-      text-align: left;
+    .desc {{
       font-size: 14px;
-      color: #166534;
-      line-height: 1.5;
+      line-height: 1.55;
+      color: #6B7280;
       margin-bottom: 28px;
     }}
     .btn {{
-      display: inline-block;
-      background-color: #176B43;
+      display: block;
+      width: 100%;
+      background-color: #111827;
       color: #FFFFFF;
+      font-size: 14px;
+      font-weight: 500;
       text-decoration: none;
-      font-weight: 700;
-      font-size: 16px;
-      padding: 14px 32px;
-      border-radius: 14px;
-      box-shadow: 0 4px 14px rgba(23, 107, 67, 0.28);
+      padding: 12px 18px;
+      border-radius: 8px;
+      transition: background-color 0.15s ease;
+    }}
+    .btn:hover {{
+      background-color: #1F2937;
+    }}
+    .hint {{
+      font-size: 12px;
+      color: #9CA3AF;
+      margin-top: 20px;
     }}
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="icon-container">
-      <svg class="icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+    <div class="brand">FoodShare</div>
+    <div class="icon-wrap">
+      <svg class="icon" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
       </svg>
     </div>
     <h1>Email Verified!</h1>
     <div class="badge">Next Step: Administrator Review</div>
-    <div class="notice-box">
-      {safe_msg}
-    </div>
-    <p>
-      Your account is now queued for administrator review. Once an administrator approves your account, you can log in to the FoodShare app with your credentials.
+    <p class="desc">
+      Your email address is verified. Your account is now queued for administrator review. You can return to the mobile app now.
     </p>
     <a href="foodsharemobile://" class="btn">Open FoodShare App</a>
+    <p class="hint">You can safely close this browser window</p>
   </div>
 </body>
 </html>"""
 
 
 def render_verification_error_html(error_message: str) -> str:
-    """Renders a friendly error page when verification token is invalid or expired."""
+    """Renders a minimal, modern error page when verification token is invalid or expired."""
     safe_err = html.escape(error_message)
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -413,94 +415,115 @@ def render_verification_error_html(error_message: str) -> str:
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Verification Error - FoodShare</title>
   <style>
-    * {{ box-sizing: border-box; }}
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
     body {{
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background-color: #F4F7F3;
-      margin: 0;
-      padding: 40px 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #FAFAFA;
+      color: #111827;
+      min-height: 100vh;
       display: flex;
-      justify-content: center;
       align-items: center;
-      min-height: 90vh;
+      justify-content: center;
+      padding: 24px 16px;
+      -webkit-font-smoothing: antialiased;
     }}
     .card {{
       background: #FFFFFF;
-      max-width: 480px;
       width: 100%;
-      border-radius: 24px;
-      padding: 44px 32px;
+      max-width: 380px;
+      border: 1px solid #E5E7EB;
+      border-radius: 16px;
+      padding: 36px 28px;
       text-align: center;
-      box-shadow: 0 10px 30px rgba(13, 59, 34, 0.08);
-      border: 1px solid rgba(180, 35, 24, 0.12);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 6px 16px rgba(0, 0, 0, 0.02);
     }}
-    .icon-container {{
-      width: 76px;
-      height: 76px;
+    .brand {{
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #9CA3AF;
+      margin-bottom: 24px;
+    }}
+    .icon-wrap {{
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
+      background-color: #FEF2F2;
+      border: 1px solid #FEE2E2;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 24px auto;
+      margin: 0 auto 18px auto;
     }}
     .icon {{
-      width: 40px;
-      height: 40px;
-      color: #B42318;
+      width: 22px;
+      height: 22px;
+      color: #DC2626;
     }}
     h1 {{
-      font-size: 22px;
-      font-weight: 800;
-      color: #17251B;
-      margin: 0 0 14px 0;
-      letter-spacing: -0.5px;
-    }}
-    p {{
-      font-size: 15px;
-      line-height: 1.6;
-      color: #526057;
-      margin: 0 0 24px 0;
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: #111827;
+      margin-bottom: 12px;
     }}
     .error-box {{
-      background-color: #FFF0EE;
-      border-left: 4px solid #B42318;
-      padding: 14px 16px;
+      background-color: #FEF2F2;
+      border: 1px solid #FEE2E2;
       border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: #991B1B;
+      line-height: 1.45;
+      margin-bottom: 16px;
       text-align: left;
+    }}
+    .desc {{
       font-size: 14px;
-      color: #B42318;
-      line-height: 1.5;
-      margin-bottom: 24px;
+      line-height: 1.55;
+      color: #6B7280;
+      margin-bottom: 28px;
     }}
     .btn {{
-      display: inline-block;
-      background-color: #176B43;
+      display: block;
+      width: 100%;
+      background-color: #111827;
       color: #FFFFFF;
+      font-size: 14px;
+      font-weight: 500;
       text-decoration: none;
-      font-weight: 700;
-      font-size: 16px;
-      padding: 14px 32px;
-      border-radius: 14px;
-      box-shadow: 0 4px 14px rgba(23, 107, 67, 0.28);
+      padding: 12px 18px;
+      border-radius: 8px;
+      transition: background-color 0.15s ease;
+    }}
+    .btn:hover {{
+      background-color: #1F2937;
+    }}
+    .hint {{
+      font-size: 12px;
+      color: #9CA3AF;
+      margin-top: 20px;
     }}
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="icon-container">
-      <svg class="icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+    <div class="brand">FoodShare</div>
+    <div class="icon-wrap">
+      <svg class="icon" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
       </svg>
     </div>
     <h1>Link Expired or Already Used</h1>
     <div class="error-box">
       {safe_err}
     </div>
-    <p>
-      This verification link is invalid, expired, or has already been used. If you have already verified your email, your account is awaiting administrator approval.
+    <p class="desc">
+      Verification links expire after 5 minutes for security. Please open the FoodShare app to request a new link, or sign in if you are already approved.
     </p>
     <a href="foodsharemobile://" class="btn">Open FoodShare App</a>
+    <p class="hint">You can safely close this browser window</p>
   </div>
 </body>
 </html>"""
