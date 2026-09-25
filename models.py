@@ -2,7 +2,9 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
+import sqlalchemy as sa
 from sqlalchemy import CheckConstraint, Index, UniqueConstraint
+from sqlalchemy.types import String, TypeDecorator
 from sqlmodel import Field, SQLModel
 
 
@@ -27,6 +29,41 @@ class UserStatus(str, Enum):
     PENDING_ADMIN = "pending_admin"
     ACTIVE = "active"
     REJECTED = "rejected"
+
+
+class UserStatusType(TypeDecorator):
+    """
+    Robust TypeDecorator for UserStatus.
+    Ensures that whether the database stores lowercase ('active') or uppercase
+    enum names ('ACTIVE', 'PENDING_ADMIN'), it always maps seamlessly to UserStatus
+    without throwing a SQLAlchemy LookupError.
+    """
+    impl = String(50)
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, UserStatus):
+            return value.value
+        if isinstance(value, str):
+            val_clean = value.lower().strip()
+            for s in UserStatus:
+                if s.value == val_clean or s.name.lower() == val_clean:
+                    return s.value
+            return val_clean
+        return str(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, UserStatus):
+            return value
+        val_clean = str(value).lower().strip()
+        for s in UserStatus:
+            if s.value == val_clean or s.name.lower() == val_clean:
+                return s
+        return UserStatus(val_clean)
 
 
 class DonationStatus(str, Enum):
@@ -78,7 +115,12 @@ class User(SQLModel, table=True):
     role: UserRole = Field(index=True)
     status: UserStatus = Field(
         default=UserStatus.PENDING_EMAIL,
-        index=True,
+        sa_column=sa.Column(
+            UserStatusType(),
+            nullable=False,
+            default=UserStatus.PENDING_EMAIL.value,
+            index=True,
+        ),
     )
     email_verified: bool = Field(default=False)
     email_verified_at: Optional[datetime] = Field(default=None)
