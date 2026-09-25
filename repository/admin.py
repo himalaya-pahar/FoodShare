@@ -5,8 +5,17 @@ from sqlalchemy import func, or_
 from sqlmodel import select
 
 import database as d_b
+from models import (
+    ApprovalStatus,
+    Donation,
+    PickupRequest,
+    StatusHistory,
+    User,
+    UserRole,
+    UserStatus,
+    utc_now,
+)
 import schemas
-from models import ApprovalStatus, User, UserRole, Donation, PickupRequest, StatusHistory
 
 
 def _user_search_filters(q: str | None) -> list:
@@ -36,7 +45,7 @@ def _get_paginated_users(
     if pending_only:
         filters.extend(
             [
-                User.approval_status == ApprovalStatus.PENDING,
+                User.status == UserStatus.PENDING_ADMIN,
                 User.role.in_([UserRole.RESTAURANT, UserRole.NGO]),
             ]
         )
@@ -77,6 +86,82 @@ def get_pending_users(
     )
 
 
+def approve_user(
+    user_id: int,
+    db: d_b.SessionDep,
+) -> User:
+    user = db.get(User, user_id)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    if user.role == UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin accounts cannot be changed here",
+        )
+
+    if user.status == UserStatus.ACTIVE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is already active",
+        )
+
+    if user.status == UserStatus.PENDING_EMAIL:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot approve user before email verification",
+        )
+
+    user.status = UserStatus.ACTIVE
+    user.approval_status = ApprovalStatus.APPROVED
+    user.updated_at = utc_now()
+
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return user
+
+
+def reject_user(
+    user_id: int,
+    db: d_b.SessionDep,
+) -> User:
+    user = db.get(User, user_id)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    if user.role == UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin accounts cannot be changed here",
+        )
+
+    if user.status == UserStatus.REJECTED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is already rejected",
+        )
+
+    user.status = UserStatus.REJECTED
+    user.approval_status = ApprovalStatus.REJECTED
+    user.updated_at = utc_now()
+
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return user
+
+
 def update_approval_status(
     user_id: int,
     new_status: ApprovalStatus,
@@ -96,23 +181,34 @@ def update_approval_status(
             detail="Admin accounts cannot be changed here",
         )
 
-    if user.approval_status != ApprovalStatus.PENDING:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This account has already been reviewed",
-        )
-
-    if new_status not in (
-        ApprovalStatus.APPROVED,
-        ApprovalStatus.REJECTED,
-    ):
+    if new_status == ApprovalStatus.APPROVED:
+        if user.status == UserStatus.ACTIVE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User is already active",
+            )
+        if user.status == UserStatus.PENDING_EMAIL:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot approve user before email verification",
+            )
+        user.status = UserStatus.ACTIVE
+        user.approval_status = ApprovalStatus.APPROVED
+    elif new_status == ApprovalStatus.REJECTED:
+        if user.status == UserStatus.REJECTED:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User is already rejected",
+            )
+        user.status = UserStatus.REJECTED
+        user.approval_status = ApprovalStatus.REJECTED
+    else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Choose APPROVED or REJECTED",
         )
 
-    user.approval_status = new_status
-    user.updated_at = datetime.now(timezone.utc)
+    user.updated_at = utc_now()
 
     db.add(user)
     db.commit()
@@ -141,10 +237,10 @@ def get_admin_stats(
     statement = select(
         func.count(User.id),
         func.count(User.id).filter(
-            User.approval_status == ApprovalStatus.PENDING
+            User.status == UserStatus.PENDING_ADMIN
         ),
         func.count(User.id).filter(
-            User.approval_status == ApprovalStatus.APPROVED
+            User.status == UserStatus.ACTIVE
         ),
         func.count(User.id).filter(User.role == UserRole.RESTAURANT),
         func.count(User.id).filter(User.role == UserRole.NGO),

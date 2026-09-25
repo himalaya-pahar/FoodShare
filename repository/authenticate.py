@@ -1,22 +1,30 @@
-from fastapi import Depends,HTTPException,status
-from fastapi.security import OAuth2PasswordRequestForm
-import schemas,database as d_b
-from security import hashing,token
+from datetime import datetime, timezone
 from typing import Annotated
+
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import select
 
-from fastapi import HTTPException, status
-from sqlmodel import select
-
+from config import (
+    VERIFICATION_RESEND_COOLDOWN_SECONDS,
+    VERIFICATION_TOKEN_EXPIRE_HOURS,
+)
 import database as d_b
+from models import ApprovalStatus, User, UserRole, UserStatus, utc_now
 import schemas
-from models import User, UserRole, ApprovalStatus
-from security import hashing
+from security import hashing, token
+from security.verification import (
+    generate_verification_token,
+    hash_verification_token,
+)
+from services.email import email_service
 
 
 def signup(user: schemas.UserSignup, db: d_b.SessionDep) -> schemas.ShowUser:
+    email_clean = user.email.lower().strip()
+
     existing_user = db.exec(
-        select(User).where(User.email == user.email)
+        select(User).where(User.email == email_clean)
     ).first()
 
     if existing_user:
@@ -31,22 +39,191 @@ def signup(user: schemas.UserSignup, db: d_b.SessionDep) -> schemas.ShowUser:
             detail="Admin accounts cannot be created through signup",
         )
 
+    # Generate cryptographically secure single-use verification token
+    raw_token, token_hash = generate_verification_token()
+    now = utc_now()
+
     new_user = User(
-        full_name=user.full_name,
-        organization_name=user.organization_name,
-        email=user.email.lower().strip(),
+        full_name=user.full_name.strip(),
+        organization_name=user.organization_name.strip() if user.organization_name else None,
+        email=email_clean,
         password_hash=hashing.get_hash_password(user.password),
         role=user.role,
-        phone=user.phone,
-        address=user.address,
-        area=user.area,
+        status=UserStatus.PENDING_EMAIL,
+        email_verified=False,
+        email_verified_at=None,
+        verification_token_hash=token_hash,
+        last_verification_sent_at=now,
+        verification_token_expires_at=None,  # Disabled for development phase
+        approval_status=ApprovalStatus.PENDING,
+        phone=user.phone.strip() if user.phone else None,
+        address=user.address.strip() if user.address else None,
+        area=user.area.strip() if user.area else None,
+        created_at=now,
+        updated_at=now,
     )
 
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
 
+    # Send verification email via SMTP (Gmail)
+    # The raw token is sent to the user and NEVER stored or logged
+    sent = email_service.send_verification_email(
+        to_email=new_user.email,
+        full_name=new_user.full_name,
+        raw_token=raw_token,
+    )
+    if not sent:
+        print(f"[FoodShare Email] WARNING: Email delivery failed for {new_user.email}. Check terminal logs for SMTP details.")
+
     return new_user
+
+
+def verify_email(
+    token_str: str,
+    db: d_b.SessionDep,
+) -> schemas.VerifyEmailResponse:
+    if not token_str or not token_str.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Verification token is required",
+        )
+
+    # Hash received raw token for database lookup
+    token_hash = hash_verification_token(token_str)
+
+    user = db.exec(
+        select(User).where(User.verification_token_hash == token_hash)
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or already-used verification token",
+        )
+
+    # If the user is already verified and active
+    if user.status == UserStatus.ACTIVE:
+        user.verification_token_hash = None
+        db.add(user)
+        db.commit()
+        return schemas.VerifyEmailResponse(
+            message="Email is already verified.",
+            email_verified=True,
+            status=user.status,
+        )
+
+    # Optional development hook: if expiration is configured in production
+    if VERIFICATION_TOKEN_EXPIRE_HOURS > 0 and user.verification_token_expires_at:
+        now = utc_now()
+        if user.verification_token_expires_at < now:
+            user.verification_token_hash = None
+            db.add(user)
+            db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Verification token has expired. Please request a new verification email.",
+            )
+
+    # Valid token: update status to pending_admin, set email_verified, and invalidate token
+    now = utc_now()
+    user.email_verified = True
+    user.email_verified_at = now
+    user.status = UserStatus.PENDING_ADMIN
+    user.approval_status = ApprovalStatus.PENDING
+    user.verification_token_hash = None  # Invalidate immediately - single use
+    user.updated_at = now
+
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return schemas.VerifyEmailResponse(
+        message="Email verified successfully. Your account is now pending administrator review.",
+        email_verified=True,
+        status=UserStatus.PENDING_ADMIN,
+    )
+
+
+def resend_verification(
+    request_data: schemas.ResendVerificationRequest,
+    db: d_b.SessionDep,
+) -> schemas.ResendVerificationResponse:
+    email_clean = request_data.email.lower().strip()
+
+    user = db.exec(
+        select(User).where(User.email == email_clean)
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User with this email not found",
+        )
+
+    if user.status == UserStatus.ACTIVE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email is already verified and account is active",
+        )
+
+    if user.status == UserStatus.PENDING_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email is already verified. Your account is pending administrator review.",
+        )
+
+    if user.status == UserStatus.REJECTED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This account has been rejected by an administrator.",
+        )
+
+    if user.status != UserStatus.PENDING_EMAIL:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Account is not awaiting email verification.",
+        )
+
+    # Rate limiting / cooldown check
+    now = utc_now()
+    if user.last_verification_sent_at:
+        last_sent = user.last_verification_sent_at
+        if last_sent.tzinfo is None:
+            last_sent = last_sent.replace(tzinfo=timezone.utc)
+        elapsed_seconds = (now - last_sent).total_seconds()
+        if elapsed_seconds < VERIFICATION_RESEND_COOLDOWN_SECONDS:
+            remaining = int(VERIFICATION_RESEND_COOLDOWN_SECONDS - elapsed_seconds)
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Please wait {remaining} seconds before requesting another verification email.",
+            )
+
+    # Generate new secure token and invalidate previous one
+    raw_token, token_hash = generate_verification_token()
+    user.verification_token_hash = token_hash
+    user.last_verification_sent_at = now
+    user.updated_at = now
+
+    db.add(user)
+    db.commit()
+
+    sent = email_service.send_verification_email(
+        to_email=user.email,
+        full_name=user.full_name,
+        raw_token=raw_token,
+    )
+    if not sent:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send verification email. Please check your SMTP settings in .env.",
+        )
+
+    return schemas.ResendVerificationResponse(
+        message="Verification email sent. Please check your inbox.",
+    )
+
 
 def signin(
     user: Annotated[OAuth2PasswordRequestForm, Depends()],
@@ -68,11 +245,28 @@ def signin(
             detail="Incorrect email or password",
         )
 
-    if find_user.approval_status != ApprovalStatus.APPROVED:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Your account is pending admin approval",
-        )
+    # Enforce status == active
+    if find_user.status != UserStatus.ACTIVE:
+        if find_user.status == UserStatus.PENDING_EMAIL:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your email is not verified yet. Please check your email to verify your account.",
+            )
+        elif find_user.status == UserStatus.PENDING_ADMIN:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your account is pending admin approval",
+            )
+        elif find_user.status == UserStatus.REJECTED:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your account has been rejected by an administrator",
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your account is not approved yet",
+            )
 
     access_token = token.create_access_token(
         data={"sub": find_user.email}

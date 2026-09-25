@@ -32,6 +32,36 @@ def list_pending_users(
 
 
 @router.patch(
+    "/users/{user_id}/approve",
+    response_model=schemas.AdminUserItem,
+)
+def approve_user(
+    user_id: int,
+    db: d_b.SessionDep,
+    current_admin: AdminDep,
+):
+    return admin_repository.approve_user(
+        user_id=user_id,
+        db=db,
+    )
+
+
+@router.patch(
+    "/users/{user_id}/reject",
+    response_model=schemas.AdminUserItem,
+)
+def reject_user(
+    user_id: int,
+    db: d_b.SessionDep,
+    current_admin: AdminDep,
+):
+    return admin_repository.reject_user(
+        user_id=user_id,
+        db=db,
+    )
+
+
+@router.patch(
     "/users/{user_id}/approval",
     response_model=schemas.AdminUserItem,
 )

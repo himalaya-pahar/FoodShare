@@ -22,6 +22,13 @@ class ApprovalStatus(str, Enum):
     REJECTED = "REJECTED"
 
 
+class UserStatus(str, Enum):
+    PENDING_EMAIL = "pending_email"
+    PENDING_ADMIN = "pending_admin"
+    ACTIVE = "active"
+    REJECTED = "rejected"
+
+
 class DonationStatus(str, Enum):
     AVAILABLE = "AVAILABLE"
     RESERVED = "RESERVED"
@@ -69,6 +76,20 @@ class User(SQLModel, table=True):
     password_hash: str = Field(max_length=255)
 
     role: UserRole = Field(index=True)
+    status: UserStatus = Field(
+        default=UserStatus.PENDING_EMAIL,
+        index=True,
+    )
+    email_verified: bool = Field(default=False)
+    email_verified_at: Optional[datetime] = Field(default=None)
+    verification_token_hash: Optional[str] = Field(
+        default=None,
+        max_length=255,
+        index=True,
+    )
+    last_verification_sent_at: Optional[datetime] = Field(default=None)
+    verification_token_expires_at: Optional[datetime] = Field(default=None)
+
     approval_status: ApprovalStatus = Field(
         default=ApprovalStatus.PENDING,
         index=True,

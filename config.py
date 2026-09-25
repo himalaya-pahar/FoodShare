@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 
 
-load_dotenv()
+load_dotenv(override=True)
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -38,6 +38,32 @@ CREATE_TABLES_ON_STARTUP = (
     os.getenv("CREATE_TABLES_ON_STARTUP", "false").lower()
     == "true"
 )
+
+# ---------------------------------------------------------------------------
+# Email / Gmail SMTP Configuration & Verification Settings
+# ---------------------------------------------------------------------------
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USERNAME = os.getenv("SMTP_USERNAME", "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "") or SMTP_USERNAME or "noreply@foodshare.app"
+SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "FoodShare")
+SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
+
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
+
+# Cooldown for resend verification email requests (in seconds)
+VERIFICATION_RESEND_COOLDOWN_SECONDS = int(
+    os.getenv("VERIFICATION_RESEND_COOLDOWN_SECONDS", "60")
+)
+
+# Development phase: token expiration is 0 (disabled).
+# When ready for production, set to e.g. 24 (hours).
+VERIFICATION_TOKEN_EXPIRE_HOURS = int(
+    os.getenv("VERIFICATION_TOKEN_EXPIRE_HOURS", "0")
+)
+
 
 
 # ---------------------------------------------------------------------------

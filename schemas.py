@@ -1,6 +1,14 @@
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
-from models import ApprovalStatus, UserRole, DonationStatus, PickupRequestStatus, AuditEntityType, MediaType
+from models import (
+    ApprovalStatus,
+    UserRole,
+    UserStatus,
+    DonationStatus,
+    PickupRequestStatus,
+    AuditEntityType,
+    MediaType,
+)
 from datetime import datetime
 from typing import Literal
 
@@ -27,7 +35,9 @@ class ShowUser(BaseModel):
     organization_name: Optional[str] = None
     email: str
     role: UserRole
-    approval_status: ApprovalStatus
+    status: UserStatus = UserStatus.PENDING_EMAIL
+    email_verified: bool = False
+    approval_status: Optional[ApprovalStatus] = None
     phone: Optional[str] = None
     address: Optional[str] = None
     area: Optional[str] = None
@@ -43,8 +53,24 @@ class AdminUserItem(BaseModel):
     organization_name: Optional[str] = None
     email: str
     role: UserRole
-    approval_status: ApprovalStatus
+    status: UserStatus = UserStatus.PENDING_ADMIN
+    email_verified: bool = False
+    approval_status: Optional[ApprovalStatus] = None
     created_at: datetime
+
+
+class VerifyEmailResponse(BaseModel):
+    message: str
+    email_verified: bool
+    status: UserStatus
+
+
+class ResendVerificationRequest(BaseModel):
+    email: str = Field(min_length=5, max_length=255)
+
+
+class ResendVerificationResponse(BaseModel):
+    message: str
 
 
 class PaginatedUsers(BaseModel):

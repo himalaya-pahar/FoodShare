@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlmodel import select
 
 import database as d_b
-from models import ApprovalStatus, User, UserRole
+from models import ApprovalStatus, User, UserRole, UserStatus
 from security import token
 
 
@@ -31,11 +31,27 @@ def get_current_user(
     if not user:
         raise credentials_exception
 
-    if user.approval_status != ApprovalStatus.APPROVED:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Your account is not approved",
-        )
+    if user.status != UserStatus.ACTIVE:
+        if user.status == UserStatus.PENDING_EMAIL:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your email is not verified yet. Please check your email to verify your account.",
+            )
+        elif user.status == UserStatus.PENDING_ADMIN:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your account is pending admin approval.",
+            )
+        elif user.status == UserStatus.REJECTED:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your account has been rejected by an administrator.",
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your account is not approved yet.",
+            )
 
     return user
 
