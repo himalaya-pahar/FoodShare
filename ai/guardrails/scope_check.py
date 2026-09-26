@@ -99,7 +99,7 @@ def classify_scope(message: str) -> ScopeResult:
 
 # Controlled refusal text — kept verbatim and exportable so tests can assert.
 OUT_OF_DOMAIN_REFUSAL = (
-    "I am the FoodShare Assistant! I'm here to help you with FoodShare donations, "
-    "pickups, account questions, and food safety guidelines. "
-    "How can I help you with FoodShare today?"
+    "I am the FoodShare Guide. I only provide guidance on FoodShare platform operations, "
+    "donation rules, the NGO pickup process, and food safety standards. "
+    "How can I assist you with FoodShare today?"
 )

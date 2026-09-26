@@ -16,6 +16,12 @@ router = APIRouter(
     response_model=schemas.ShowPickupRequest,
     status_code=status.HTTP_201_CREATED,
 )
+@router.post(
+    "/donations/{donation_id}/requests",
+    response_model=schemas.ShowPickupRequest,
+    status_code=status.HTTP_201_CREATED,
+    include_in_schema=False,
+)
 def create_pickup_request(
     donation_id: int,
     pickup_request: schemas.PickupRequestCreate,
@@ -34,6 +40,11 @@ def create_pickup_request(
     "/pickup-requests/my",
     response_model=schemas.PaginatedPickupRequests,
 )
+@router.get(
+    "/pickups/my",
+    response_model=schemas.PaginatedPickupRequests,
+    include_in_schema=False,
+)
 def get_my_pickup_requests(
     db: d_b.SessionDep,
     current_user: oauth2.NGOOrAdminDep,
@@ -51,6 +62,11 @@ def get_my_pickup_requests(
 @router.get(
     "/donations/{donation_id}/pickup-requests",
     response_model=schemas.PaginatedDonationPickupRequests,
+)
+@router.get(
+    "/donations/{donation_id}/requests",
+    response_model=schemas.PaginatedDonationPickupRequests,
+    include_in_schema=False,
 )
 def get_donation_pickup_requests(
     donation_id: int,

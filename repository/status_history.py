@@ -52,7 +52,7 @@ def get_my_donation_history(
             StatusHistory.donation_id == Donation.id,
         )
         .where(Donation.restaurant_id == restaurant.id)
-        .order_by(StatusHistory.created_at.desc())
+        .order_by(StatusHistory.created_at.desc(), StatusHistory.id.desc())
     ).all()
 
 
@@ -147,7 +147,7 @@ def get_pickup_request_history(
     return db.exec(
         select(StatusHistory)
         .where(StatusHistory.pickup_request_id == request_id)
-        .order_by(StatusHistory.created_at.desc())
+        .order_by(StatusHistory.created_at.desc(), StatusHistory.id.desc())
     ).all()
 
 

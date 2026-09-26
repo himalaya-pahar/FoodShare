@@ -193,7 +193,7 @@ def get_my_pickup_requests(
     pickup_requests_statement = (
         select(PickupRequest)
         .where(*filters)
-        .order_by(PickupRequest.requested_at.asc(), PickupRequest.id.asc())
+        .order_by(PickupRequest.requested_at.desc(), PickupRequest.id.desc())
         .offset(offset)
         .limit(limit)
     )
@@ -226,7 +226,7 @@ def get_donation_pickup_requests(
         select(PickupRequest, User)
         .join(User, PickupRequest.ngo_id == User.id)
         .where(*filters)
-        .order_by(PickupRequest.requested_at.asc(), PickupRequest.id.asc())
+        .order_by(PickupRequest.requested_at.desc(), PickupRequest.id.desc())
         .offset(offset)
         .limit(limit)
     )

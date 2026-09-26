@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import HTTPException, status
-from sqlalchemy import func
+from sqlalchemy import func, update
 from sqlmodel import select
 
 import database as d_b
@@ -86,7 +86,7 @@ def get_my_donations(
         select(Donation, User)
         .join(User, Donation.restaurant_id == User.id)
         .where(*filters)
-        .order_by(Donation.created_at.asc(), Donation.id.asc())
+        .order_by(Donation.created_at.desc(), Donation.id.desc())
         .offset(offset)
         .limit(limit)
     )
@@ -113,7 +113,26 @@ def get_available_donations(
     limit: int = 20,
     offset: int = 0,
 ) -> schemas.PaginatedDonationsWithRestaurant:
-    filters = [Donation.status == DonationStatus.AVAILABLE]
+    now = datetime.now(timezone.utc)
+
+    # Auto-transition expired available donations to EXPIRED status
+    db.exec(
+        update(Donation)
+        .where(
+            Donation.status == DonationStatus.AVAILABLE,
+            Donation.pickup_deadline <= now,
+        )
+        .values(
+            status=DonationStatus.EXPIRED,
+            updated_at=now,
+        )
+    )
+    db.commit()
+
+    filters = [
+        Donation.status == DonationStatus.AVAILABLE,
+        Donation.pickup_deadline > now,
+    ]
 
     if area:
         filters.append(
@@ -124,7 +143,7 @@ def get_available_donations(
         select(Donation, User)
         .join(User, Donation.restaurant_id == User.id)
         .where(*filters)
-        .order_by(Donation.pickup_deadline.asc(), Donation.id.asc())
+        .order_by(Donation.created_at.desc(), Donation.id.desc())
         .offset(offset)
         .limit(limit)
     )

@@ -35,6 +35,11 @@ def create_donation(
     "/my",
     response_model=schemas.PaginatedDonationsWithRestaurant,
 )
+@router.get(
+    "/restaurant",
+    response_model=schemas.PaginatedDonationsWithRestaurant,
+    include_in_schema=False,
+)
 def get_my_donations(
     db: d_b.SessionDep,
     current_user: oauth2.RestaurantOrAdminDep,
@@ -49,6 +54,15 @@ def get_my_donations(
     )
 
 
+@router.get(
+    "",
+    response_model=schemas.PaginatedDonationsWithRestaurant,
+)
+@router.get(
+    "/",
+    response_model=schemas.PaginatedDonationsWithRestaurant,
+    include_in_schema=False,
+)
 @router.get(
     "/available",
     response_model=schemas.PaginatedDonationsWithRestaurant,
