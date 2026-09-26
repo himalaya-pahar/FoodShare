@@ -1,7 +1,6 @@
 from typing import Annotated
 
 from fastapi import Depends
-from sqlalchemy.pool import NullPool
 from sqlmodel import SQLModel, Session, create_engine
 
 from config import DATABASE_URL
@@ -18,8 +17,11 @@ if IS_SQLITE:
 else:
     engine = create_engine(
         DATABASE_URL,
-        poolclass=NullPool,
+        pool_size=10,
+        max_overflow=20,
+        pool_timeout=30,
         pool_pre_ping=True,
+        pool_recycle=300,
         connect_args={"prepare_threshold": None},
     )
 

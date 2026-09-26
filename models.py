@@ -192,7 +192,7 @@ class Donation(SQLModel, table=True):
         index=True,
     )
 
-    created_at: datetime = Field(default_factory=utc_now)
+    created_at: datetime = Field(default_factory=utc_now, index=True)
     updated_at: datetime = Field(default_factory=utc_now)
 
 
@@ -226,7 +226,7 @@ class PickupRequest(SQLModel, table=True):
         index=True,
     )
 
-    requested_at: datetime = Field(default_factory=utc_now)
+    requested_at: datetime = Field(default_factory=utc_now, index=True)
     updated_at: datetime = Field(default_factory=utc_now)
 
 
@@ -255,7 +255,7 @@ class StatusHistory(SQLModel, table=True):
     new_status: Optional[str] = Field(default=None, max_length=20)
 
     note: Optional[str] = None
-    created_at: datetime = Field(default_factory=utc_now)
+    created_at: datetime = Field(default_factory=utc_now, index=True)
 
 
 class UserProfileImage(SQLModel, table=True):

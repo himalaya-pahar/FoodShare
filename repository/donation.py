@@ -3,7 +3,7 @@ from typing import Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, update
-from sqlmodel import select
+from sqlmodel import Session, select
 
 import database as d_b
 import schemas
@@ -107,6 +107,32 @@ def get_my_donations(
     )
 
 
+_last_expiry_cleanup: datetime = datetime.min.replace(tzinfo=timezone.utc)
+
+
+def auto_expire_past_donations(db: Session, force: bool = False) -> None:
+    global _last_expiry_cleanup
+    now = datetime.now(timezone.utc)
+    if not force and (now - _last_expiry_cleanup).total_seconds() < 60:
+        return
+    _last_expiry_cleanup = now
+    try:
+        db.exec(
+            update(Donation)
+            .where(
+                Donation.status == DonationStatus.AVAILABLE,
+                Donation.pickup_deadline <= now,
+            )
+            .values(
+                status=DonationStatus.EXPIRED,
+                updated_at=now,
+            )
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+
+
 def get_available_donations(
     db: d_b.SessionDep,
     area: Optional[str] = None,
@@ -115,19 +141,8 @@ def get_available_donations(
 ) -> schemas.PaginatedDonationsWithRestaurant:
     now = datetime.now(timezone.utc)
 
-    # Auto-transition expired available donations to EXPIRED status
-    db.exec(
-        update(Donation)
-        .where(
-            Donation.status == DonationStatus.AVAILABLE,
-            Donation.pickup_deadline <= now,
-        )
-        .values(
-            status=DonationStatus.EXPIRED,
-            updated_at=now,
-        )
-    )
-    db.commit()
+    # Throttled auto-transition of expired donations (at most once every 60s)
+    auto_expire_past_donations(db, force=False)
 
     filters = [
         Donation.status == DonationStatus.AVAILABLE,

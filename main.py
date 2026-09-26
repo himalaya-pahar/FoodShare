@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 import database as d_b
 import models
 from ai.api.routes import router as ai_router
@@ -37,6 +38,11 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],        
     allow_headers=["*"],        
+)
+
+app.add_middleware(
+    GZipMiddleware,
+    minimum_size=1000,
 )
 
 app.include_router(authenticate.router)
