@@ -104,7 +104,7 @@ class GroqProvider(LLMProvider):
         *,
         system: str,
         user: str,
-        max_tokens: int = 400,
+        max_tokens: int = 500,
         temperature: float = 0.2,
     ) -> str:
         try:
