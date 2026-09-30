@@ -104,7 +104,7 @@ class GroqProvider(LLMProvider):
         *,
         system: str,
         user: str,
-        max_tokens: int = 150,
+        max_tokens: int = 300,
         temperature: float = 0.2,
     ) -> str:
         try:
@@ -173,7 +173,7 @@ class GeminiProvider(LLMProvider):
         *,
         system: str,
         user: str,
-        max_tokens: int = 150,
+        max_tokens: int = 350,
         temperature: float = 0.2,
     ) -> str:
         try:
