@@ -281,13 +281,18 @@ def generate_with_fallback(
             temperature=temperature,
         )
         return text, primary.name
-    except LLMRateLimitError:
+    except LLMError as exc:
+        # Fall back to Gemini on ANY Groq error: rate limit, bad model,
+        # invalid key, network issues, etc.
         if fallback is None:
             raise LLMError(
-                "Groq rate limit reached and no fallback provider is configured. "
-                "Set GEMINI_API_KEY in .env."
-            )
-        logger.info("Groq rate limit hit — switching to Gemini fallback.")
+                f"Primary provider ({primary.name}) failed and no fallback is "
+                "configured. Set GEMINI_API_KEY in .env."
+            ) from exc
+        logger.info(
+            "Primary provider (%s) failed (%s) — switching to Gemini fallback.",
+            primary.name, exc,
+        )
         text = fallback.generate(
             system=system,
             user=user,
