@@ -75,10 +75,12 @@ VERIFICATION_TOKEN_EXPIRE_HOURS = int(
 # ---------------------------------------------------------------------------
 
 # LLM
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini").lower()
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "groq").lower()  # groq first, gemini fallback
 LLM_MODEL = os.getenv("LLM_MODEL", "gemini-3.5-flash-lite")
 LLM_API_KEY = os.getenv("LLM_API_KEY")           # generic, used by provider
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")     # alias for convenience
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")         # Groq (primary, fast)
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
 
 # Embeddings (Gemini text-embedding-004 by default; local sentence-transformers optional)
 EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "gemini").lower()
