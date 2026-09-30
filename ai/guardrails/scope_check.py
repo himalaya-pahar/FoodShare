@@ -72,7 +72,20 @@ OUT_OF_DOMAIN_KEYWORDS: tuple[str, ...] = (
     "make a description", "make description",
     "help me write", "help write",
     "write marketing", "marketing copy", "promotional",
-    "recipe", "meal idea", "meal plan",
+    # technical / internal implementation probes
+    "backend", "frontend", "source code", "api endpoint", "rest api",
+    "database schema", "sql query", "postgres", "fastapi", "server code",
+    "admin dashboard", "admin panel", "admin tool", "admin credentials",
+    "bypass approval", "bypass admin", "internal logic", "implementation details",
+    "system prompt", "database table", "table schema",
+)
+
+TECHNICAL_KEYWORDS: tuple[str, ...] = (
+    "backend", "frontend", "source code", "api endpoint", "rest api",
+    "database schema", "sql query", "postgres", "fastapi", "server code",
+    "admin dashboard", "admin panel", "admin tool", "admin credentials",
+    "bypass approval", "bypass admin", "internal logic", "implementation details",
+    "system prompt", "database table", "table schema",
 )
 
 
@@ -86,12 +99,18 @@ def classify_scope(message: str) -> ScopeResult:
     """Return the scope decision for a user message.
 
     Rules:
+        - Any TECHNICAL/BACKEND probe keyword -> out_of_domain (hard block).
         - Any ACTION/CONTENT-GENERATION keyword -> out_of_domain (hard block).
         - Any IN_DOMAIN keyword -> in_domain (even if other keywords appear).
         - Any OUT_OF_DOMAIN keyword AND no IN_DOMAIN keyword -> out_of_domain.
         - Otherwise -> unsure (system prompt handles it).
     """
     text = message.lower()
+
+    # Technical / backend probe requests: block ALWAYS.
+    tech_hit = next((kw for kw in TECHNICAL_KEYWORDS if kw in text), None)
+    if tech_hit:
+        return ScopeResult(ScopeDecision.OUT_OF_DOMAIN, tech_hit)
 
     in_hit = next((kw for kw in IN_DOMAIN_KEYWORDS if kw in text), None)
     out_hit = next((kw for kw in OUT_OF_DOMAIN_KEYWORDS if kw in text), None)
@@ -125,4 +144,9 @@ OUT_OF_DOMAIN_REFUSAL = (
 ACTION_REFUSAL = (
     "I can only explain how to use FoodShare. "
     "I cannot create content or perform actions."
+)
+
+TECHNICAL_REFUSAL = (
+    "I can only explain how to use the FoodShare app from a user's perspective. "
+    "I do not provide technical, backend, or administrative implementation details."
 )

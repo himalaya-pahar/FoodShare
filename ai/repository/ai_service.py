@@ -24,6 +24,8 @@ from ai.guardrails.scope_check import (
     ACTION_REFUSAL,
     OUT_OF_DOMAIN_REFUSAL,
     ScopeDecision,
+    TECHNICAL_KEYWORDS,
+    TECHNICAL_REFUSAL,
     classify_scope,
 )
 from ai.repository.sessions import Session, SessionStore, get_store
@@ -98,14 +100,18 @@ def handle_chat(
     log_extra["scope"] = scope.decision.value
 
     if scope.decision == ScopeDecision.OUT_OF_DOMAIN:
-        # Use action-specific refusal if the message was trying to get the
-        # assistant to create content (description, title, recipe, etc.)
-        _action_verbs = ("write", "generate", "draft", "create", "suggest", "make", "help me")
+        # Check for technical/backend probe vs content generation vs generic off-topic
         _msg_lower = message.lower()
-        if any(v in _msg_lower for v in _action_verbs):
-            answer = ACTION_REFUSAL
+        if scope.matched_keyword in TECHNICAL_KEYWORDS or any(
+            t in _msg_lower for t in TECHNICAL_KEYWORDS
+        ):
+            answer = TECHNICAL_REFUSAL
         else:
-            answer = OUT_OF_DOMAIN_REFUSAL
+            _action_verbs = ("write", "generate", "draft", "create", "suggest", "make", "help me")
+            if any(v in _msg_lower for v in _action_verbs):
+                answer = ACTION_REFUSAL
+            else:
+                answer = OUT_OF_DOMAIN_REFUSAL
         store.append_turn(session, "user", message)
         store.append_turn(session, "assistant", answer)
         logger.info("chat.out_of_domain %s", log_extra)

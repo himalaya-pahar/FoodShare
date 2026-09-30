@@ -28,9 +28,9 @@ An NGO may withdraw its own pending request. After acceptance, collect the food 
 The estimated pickup time must be within the donation's pickup window. If a
 request is rejected, check the request status or contact the restaurant.
 
-## Administrator guide
+## Account approval
 
-Administrators review pending accounts, approve or reject them, view users, and remove inactive non-administrator accounts. Administrators can also inspect activity history.
+Administrators review pending organization accounts to ensure platform trust and safety before login access is granted. Regular users cannot perform administrative actions.
 
 ## Donation statuses
 
