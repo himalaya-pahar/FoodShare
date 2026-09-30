@@ -108,8 +108,20 @@ class GeminiProvider(LLMProvider):
             logger.warning("Gemini API error: %s", exc)
             raise LLMError("LLM provider failed") from exc
 
-        text = getattr(response, "text", None)
-        if not text:
+        # Gemini returns empty candidates when a safety filter blocks the output.
+        # Accessing .text in that case raises ValueError or returns None.
+        try:
+            text = response.text
+        except Exception:  # noqa: BLE001 — safety-blocked response has no .text
+            text = None
+
+        if not text or not text.strip():
+            # Log finish reason to help debug which safety category fired.
+            try:
+                finish = response.candidates[0].finish_reason if response.candidates else "UNKNOWN"
+            except Exception:  # noqa: BLE001
+                finish = "UNKNOWN"
+            logger.warning("Gemini returned empty output (finish_reason=%s)", finish)
             raise LLMError("LLM provider returned empty response")
         return text
 

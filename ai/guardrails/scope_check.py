@@ -62,9 +62,8 @@ OUT_OF_DOMAIN_KEYWORDS: tuple[str, ...] = (
 
 TECHNICAL_KEYWORDS: tuple[str, ...] = (
     "source code", "api endpoint", "rest api", "database schema",
-    "sql query", "sql injection", "database table", "table schema",
-    "server architecture", "fastapi backend", "admin credentials",
-    "bypass approval", "bypass admin", "admin password", "backend api",
+    "sql query", "database table", "table schema",
+    "server architecture", "fastapi backend", "backend api",
 )
 
 
@@ -112,5 +111,5 @@ ACTION_REFUSAL = (
 )
 
 TECHNICAL_REFUSAL = (
-    "Technical and backend implementation details are not available."
+    "I can only help with how to use the FoodShare app."
 )
