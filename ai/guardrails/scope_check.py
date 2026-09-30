@@ -135,18 +135,15 @@ def classify_scope(message: str) -> ScopeResult:
     return ScopeResult(ScopeDecision.UNSURE, None)
 
 
-# Refusal messages — kept verbatim so tests can assert on them.
+# Refusal messages — direct and straightforward, no disclaimers.
 OUT_OF_DOMAIN_REFUSAL = (
-    "I can only explain how to use FoodShare. "
-    "How can I help you with the app?"
+    "I only answer questions about using the FoodShare app."
 )
 
 ACTION_REFUSAL = (
-    "I can only explain how to use FoodShare. "
-    "I cannot create content or perform actions."
+    "Donors must write their own food descriptions. I cannot create content or perform actions."
 )
 
 TECHNICAL_REFUSAL = (
-    "I can only explain how to use the FoodShare app from a user's perspective. "
-    "I do not provide technical, backend, or administrative implementation details."
+    "Technical and backend implementation details are not available."
 )
