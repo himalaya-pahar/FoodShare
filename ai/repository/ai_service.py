@@ -14,7 +14,7 @@ from typing import Optional
 
 from ai.api.schemas import SourceItem
 from ai.generation.answer_parser import validate_answer
-from ai.generation.llm import LLMProvider, generate_with_fallback, get_provider
+from ai.generation.llm import LLMProvider, get_provider
 from ai.generation.prompt import render_prompt
 from ai.guardrails.output_validation import (
     safe_fallback_no_evidence,
@@ -76,27 +76,22 @@ def handle_chat(
         "user_id": user_id,
     }
 
-    # Use Groq (primary) with automatic Gemini fallback on rate-limit.
-    # If a specific llm was injected (e.g. tests), skip the fallback logic.
-    _use_fallback = llm is None
-    if llm is None:
-        try:
-            # Validate at least one provider is configured
-            generate_with_fallback  # noqa: B018 — imported above
-        except Exception as exc:
-            logger.error("AI service initialization failed: %s", exc)
-            answer = safe_fallback_temporary()
-            return _finalize(
-                session=session,
-                answer=answer,
-                sources=[],
-                scope_decision="in_domain",
-                request_id=request_id,
-                started=started,
-                retrieval_count=0,
-                rewrite_method="none",
-                model="(error)",
-            )
+    try:
+        llm = llm or get_provider()
+    except Exception as exc:
+        logger.error("AI service initialization failed: %s", exc)
+        answer = safe_fallback_temporary()
+        return _finalize(
+            session=session,
+            answer=answer,
+            sources=[],
+            scope_decision="in_domain",
+            request_id=request_id,
+            started=started,
+            retrieval_count=0,
+            rewrite_method="none",
+            model="(error)",
+        )
 
     # 1. Scope check for completely off-topic questions (e.g. sports, crypto, coding).
     scope = classify_scope(message)
@@ -136,23 +131,14 @@ def handle_chat(
         recent_turns=recent_for_prompt,
     )
 
-    # 3. Call LLM — Groq first, auto-fallback to Gemini on rate-limit
+    # 3. Call LLM with full FoodShare system instruction
     try:
-        if _use_fallback:
-            raw, provider_used = generate_with_fallback(
-                system=system,
-                user=user_prompt,
-                max_tokens=150,
-                temperature=0.2,
-            )
-        else:
-            raw = llm.generate(
-                system=system,
-                user=user_prompt,
-                max_tokens=150,
-                temperature=0.2,
-            )
-            provider_used = llm.name
+        raw = llm.generate(
+            system=system,
+            user=user_prompt,
+            max_tokens=500,
+            temperature=0.2,
+        )
     except Exception as exc:  # noqa: BLE001
         logger.warning("LLM failure: %s %s", exc, log_extra)
         answer = safe_fallback_temporary()
@@ -167,7 +153,7 @@ def handle_chat(
             started=started,
             retrieval_count=0,
             rewrite_method="none",
-            model=llm.name if llm else "(error)",
+            model=llm.name,
         )
 
     answer, sources = validate_answer(raw)
@@ -186,7 +172,7 @@ def handle_chat(
         started=started,
         retrieval_count=0,
         rewrite_method="none",
-        model=provider_used if _use_fallback else (llm.name if llm else ""),
+        model=llm.name,
     )
 
 
