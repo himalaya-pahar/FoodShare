@@ -159,7 +159,7 @@ def handle_chat(
             started=started,
             retrieval_count=0,
             rewrite_method="none",
-            model=llm.name,
+            model=llm.name if llm else "(error)",
         )
 
     answer, sources = validate_answer(raw)
@@ -178,7 +178,7 @@ def handle_chat(
         started=started,
         retrieval_count=0,
         rewrite_method="none",
-        model=llm.name,
+        model=provider_used if _use_fallback else (llm.name if llm else ""),
     )
 
 
