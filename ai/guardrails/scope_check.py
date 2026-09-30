@@ -21,71 +21,50 @@ class ScopeDecision(str, Enum):
     UNSURE = "unsure"
 
 
-# Words that strongly suggest a FoodShare question.
+# Words that indicate a FoodShare related question.
 IN_DOMAIN_KEYWORDS: tuple[str, ...] = (
     # roles
     "restaurant", "ngo", "charity", "admin", "administrator", "account",
     # auth / lifecycle
     "signup", "sign up", "register", "login", "log in", "approve",
     "approval", "pending", "reject", "verification", "verify", "email",
+    "password", "forgot password", "reset password",
     # donations
     "donation", "donate", "donating", "donated", "surplus", "leftover",
-    "quantity", "pickup deadline", "deadline", "prepared",
+    "quantity", "pickup deadline", "deadline", "prepared", "food",
+    "meal", "expiry", "expire", "allergens", "storage",
     # status
     "available", "reserved", "collected", "completed", "cancelled", "expired",
     # pickup requests
     "pickup", "pick up", "pick-up", "request", "withdraw", "withdrawn",
-    "accept", "accepted", "rejected",
-    # app navigation
+    "accept", "accepted", "rejected", "handoff", "handover", "collect",
+    # app navigation & features
     "area", "address", "location", "filter",
     "image", "photo", "video", "media", "upload", "profile",
+    "description", "post", "listing",
     # general app refs
-    "foodshare", "the app", "the application", "the platform",
-    "food share",
+    "foodshare", "the app", "the application", "the platform", "food share",
+    "how to use", "how does", "help",
 )
 
 
-# Words that strongly suggest the question is off-topic OR is asking the
-# assistant to DO or CREATE something it must not do.
+# Strictly off-topic topics that have zero connection to FoodShare.
 OUT_OF_DOMAIN_KEYWORDS: tuple[str, ...] = (
-    # clearly off-topic topics
     "weather", "forecast",
-    "joke", "funny", "meme",
-    "politician", "election", "vote",
-    "quantum", "relativity", "physics",
-    "investment", "stock", "crypto", "bitcoin",
-    "how to cook", "cooking", "bake",
-    "translate", "translation",
-    "python", "javascript", "java", "rust", "coding", "programming",
-    "homework", "essay", "thesis",
-    "news", "sport", "game", "movie", "music",
-    # action/content-generation requests the assistant must never do
-    "write a description", "write description", "write me a description",
-    "generate a description", "generate description",
-    "write a title", "write me a title",
-    "write a caption", "write caption",
-    "write a post", "write post",
-    "write a message", "write message",
-    "draft a", "draft me",
-    "create a description", "create description",
-    "suggest a description", "suggest description",
-    "make a description", "make description",
-    "help me write", "help write",
-    "write marketing", "marketing copy", "promotional",
-    # technical / internal implementation probes
-    "backend", "frontend", "source code", "api endpoint", "rest api",
-    "database schema", "sql query", "postgres", "fastapi", "server code",
-    "admin dashboard", "admin panel", "admin tool", "admin credentials",
-    "bypass approval", "bypass admin", "internal logic", "implementation details",
-    "system prompt", "database table", "table schema",
+    "joke", "funny meme",
+    "politician", "presidential election", "who to vote for",
+    "quantum physics", "relativity theory", "explain quantum",
+    "crypto", "cryptocurrency", "bitcoin", "ethereum", "stock trading", "forex",
+    "python programming", "write java code", "debug this code",
+    "homework essay", "write my essay", "write a poem", "write a story",
+    "nba score", "football match", "cricket score", "movie review",
 )
 
 TECHNICAL_KEYWORDS: tuple[str, ...] = (
-    "backend", "frontend", "source code", "api endpoint", "rest api",
-    "database schema", "sql query", "postgres", "fastapi", "server code",
-    "admin dashboard", "admin panel", "admin tool", "admin credentials",
-    "bypass approval", "bypass admin", "internal logic", "implementation details",
-    "system prompt", "database table", "table schema",
+    "source code", "api endpoint", "rest api", "database schema",
+    "sql query", "sql injection", "database table", "table schema",
+    "server architecture", "fastapi backend", "admin credentials",
+    "bypass approval", "bypass admin", "admin password", "backend api",
 )
 
 
@@ -99,32 +78,20 @@ def classify_scope(message: str) -> ScopeResult:
     """Return the scope decision for a user message.
 
     Rules:
-        - Any TECHNICAL/BACKEND probe keyword -> out_of_domain (hard block).
-        - Any ACTION/CONTENT-GENERATION keyword -> out_of_domain (hard block).
+        - Technical probe keywords -> out_of_domain (hard block).
         - Any IN_DOMAIN keyword -> in_domain (even if other keywords appear).
         - Any OUT_OF_DOMAIN keyword AND no IN_DOMAIN keyword -> out_of_domain.
-        - Otherwise -> unsure (system prompt handles it).
+        - Otherwise -> unsure (LLM handles it contextually).
     """
     text = message.lower()
 
-    # Technical / backend probe requests: block ALWAYS.
+    # Technical / backend probes: block immediately
     tech_hit = next((kw for kw in TECHNICAL_KEYWORDS if kw in text), None)
     if tech_hit:
         return ScopeResult(ScopeDecision.OUT_OF_DOMAIN, tech_hit)
 
     in_hit = next((kw for kw in IN_DOMAIN_KEYWORDS if kw in text), None)
     out_hit = next((kw for kw in OUT_OF_DOMAIN_KEYWORDS if kw in text), None)
-
-    # Action/content-generation requests: block ALWAYS, even if foodshare is mentioned.
-    _action_keywords = {kw for kw in OUT_OF_DOMAIN_KEYWORDS if any(
-        verb in kw for verb in (
-            "write", "generate", "draft", "create", "suggest", "make",
-            "help me", "recipe", "marketing", "promotional",
-        )
-    )}
-    action_hit = next((kw for kw in _action_keywords if kw in text), None)
-    if action_hit:
-        return ScopeResult(ScopeDecision.OUT_OF_DOMAIN, action_hit)
 
     if in_hit is not None:
         return ScopeResult(ScopeDecision.IN_DOMAIN, in_hit)
@@ -135,13 +102,13 @@ def classify_scope(message: str) -> ScopeResult:
     return ScopeResult(ScopeDecision.UNSURE, None)
 
 
-# Refusal messages — direct and straightforward, no disclaimers.
+# Refusal messages — direct, straightforward, relevant.
 OUT_OF_DOMAIN_REFUSAL = (
-    "I only answer questions about using the FoodShare app."
+    "I can only help with questions about using the FoodShare app."
 )
 
 ACTION_REFUSAL = (
-    "Donors must write their own food descriptions. I cannot create content or perform actions."
+    "I cannot write descriptions or perform actions in the app."
 )
 
 TECHNICAL_REFUSAL = (

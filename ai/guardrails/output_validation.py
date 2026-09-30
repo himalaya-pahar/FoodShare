@@ -34,7 +34,7 @@ _DRIFT_HINT_RE = re.compile(
     r"(?i)\b(" + "|".join(re.escape(w) for w in OUT_OF_DOMAIN_KEYWORDS) + r")\b"
 )
 _ONDOMAIN_HINT_RE = re.compile(
-    r"(?i)\b(foodshare|donation|pickup|ngo|restaurant|admin|signup|approval)\b"
+    r"(?i)\b(foodshare|donation|pickup|ngo|restaurant|admin|signup|approval|food|meal|charity|donor|account|login|register)\b"
 )
 
 
