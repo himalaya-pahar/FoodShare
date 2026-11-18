@@ -26,7 +26,18 @@ def validate_schedule(
     prepared_at: datetime,
     pickup_deadline: datetime,
 ):
-    if pickup_deadline <= prepared_at:
+    prepared_at_utc = (
+        prepared_at.replace(tzinfo=timezone.utc)
+        if prepared_at.tzinfo is None
+        else prepared_at.astimezone(timezone.utc)
+    )
+    pickup_deadline_utc = (
+        pickup_deadline.replace(tzinfo=timezone.utc)
+        if pickup_deadline.tzinfo is None
+        else pickup_deadline.astimezone(timezone.utc)
+    )
+
+    if pickup_deadline_utc <= prepared_at_utc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Pickup deadline must be after prepared time",

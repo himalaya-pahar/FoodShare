@@ -1,5 +1,6 @@
 import unittest
 from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
@@ -155,7 +156,11 @@ class TestUpdatesOrderingAndExpiry(unittest.TestCase):
         headers = {"Authorization": f"Bearer {self.ngo_token}"}
 
         # Test Public Feed GET /donations
-        res = self.client.get("/donations", headers=headers)
+        with patch(
+            "repository.donation._last_expiry_cleanup",
+            datetime.min.replace(tzinfo=timezone.utc),
+        ):
+            res = self.client.get("/donations", headers=headers)
         self.assertEqual(res.status_code, 200)
         data = res.json()
         items = data["items"]
@@ -171,7 +176,14 @@ class TestUpdatesOrderingAndExpiry(unittest.TestCase):
         self.assertEqual(items[1]["food_name"], "Old Active Bread")
 
         # Verify GET /donations/available alias also returns the same
-        res_avail = self.client.get("/donations/available", headers=headers)
+        with patch(
+            "repository.donation._last_expiry_cleanup",
+            datetime.min.replace(tzinfo=timezone.utc),
+        ):
+            res_avail = self.client.get(
+                "/donations/available",
+                headers=headers,
+            )
         self.assertEqual(res_avail.status_code, 200)
         avail_items = res_avail.json()["items"]
         self.assertEqual([i["food_name"] for i in avail_items], ["Newer Active Curry", "Old Active Bread"])
@@ -287,13 +299,22 @@ class TestUpdatesOrderingAndExpiry(unittest.TestCase):
         self.assertEqual(created_times, sorted(created_times, reverse=True))
 
     def test_ai_chatbot_system_prompt(self):
-        # Verify FoodShare Guide persona and strict constraints
+        # Verify the current FoodShare Guide persona and its key boundaries.
         self.assertIn("FoodShare Guide", SYSTEM_PROMPT)
-        self.assertIn("NO POST OR FOOD DESCRIPTIONS", SYSTEM_PROMPT)
-        self.assertIn("NO MARKETING OR PROMOTIONAL COPY", SYSTEM_PROMPT)
-        self.assertIn("NO RECIPES OR COOKING ADVICE", SYSTEM_PROMPT)
-        self.assertIn("NO CREATIVE WRITING", SYSTEM_PROMPT)
-        self.assertIn("I am the FoodShare Guide. I cannot generate food descriptions", SYSTEM_PROMPT)
+        self.assertIn(
+            "I cannot write food descriptions or content for you.",
+            SYSTEM_PROMPT,
+        )
+        self.assertIn(
+            "FoodShare does not provide recipes or cooking instructions.",
+            SYSTEM_PROMPT,
+        )
+        self.assertIn("I cannot approve accounts.", SYSTEM_PROMPT)
+        self.assertIn("I cannot perform actions on your behalf.", SYSTEM_PROMPT)
+        self.assertIn(
+            "I can only help with how to use the FoodShare app.",
+            SYSTEM_PROMPT,
+        )
 
 
 if __name__ == "__main__":
